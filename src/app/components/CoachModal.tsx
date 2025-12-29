@@ -9,16 +9,8 @@ interface CoachModalProps {
   messages: Message[];
   onAddMessage: (msg: Message) => void;
   onToggleBookmark: (index: number) => void;
-  journalContent: string; // ✨ 新增：讓教練讀得到日記內容
+  journalContent: string;
 }
-
-const AI_RESPONSES = [
-  "這是一個很有趣的角度，當你這麼想的時候，心裡是什麼感覺？",
-  "如果把這個情況暫停一下，你覺得最核心的糾結點在哪裡？",
-  "聽起來這對你很重要。這讓你聯想到了過去的什麼經驗嗎？",
-  "試著深呼吸一下。如果此刻不急著找答案，你會想對自己說什麼？",
-  "這份感受背後，是不是藏著一個你很重視的價值觀？",
-];
 
 export const CoachModal: React.FC<CoachModalProps> = ({ 
   onClose, 
@@ -32,23 +24,19 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
 
-  // 自動捲動
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
 
-  // 🧠 AI 核心邏輯
   useEffect(() => {
-    // 情況一：完全沒有訊息 -> AI 要發起第一句話 (Initial Greeting)
+    // 1. 開場白 (維持原樣，因為這樣最快最穩)
     if (messages.length === 0 && !isProcessingRef.current) {
       isProcessingRef.current = true;
-      setIsTyping(true); // 顯示 AI 正在輸入...
+      setIsTyping(true);
 
-      // 模擬 AI 閱讀日記並思考的時間
       setTimeout(() => {
-        // 擷取日記前段作為引言，增加真實感
         const snippet = journalContent.slice(0, 15) + (journalContent.length > 15 ? "..." : "");
         const greeting = journalContent.trim() 
           ? `我讀了你寫的「${snippet}」。\n\n這段文字裡似乎藏著一些情緒，你現在感覺身體哪個部位最有感覺？`
@@ -56,24 +44,45 @@ export const CoachModal: React.FC<CoachModalProps> = ({
 
         onAddMessage({ role: 'assistant', content: greeting });
         setIsTyping(false);
-        
         setTimeout(() => { isProcessingRef.current = false; }, 100);
-      }, 1500); // 1.5秒後出字
+      }, 1500);
     }
 
-    // 情況二：使用者回覆了 -> AI 要接話 (Follow-up)
+    // 2. 使用者回覆後 -> 呼叫真實 AI API 🚀
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'user' && !isTyping && !isProcessingRef.current) {
       isProcessingRef.current = true;
       setIsTyping(true);
 
-      const randomResponse = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+      const fetchAIResponse = async () => {
+        try {
+          // 呼叫我們剛剛寫好的後端
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: lastMsg.content,
+              journalContent: journalContent,
+              // history: messages // 如果未來要讓 AI 記得上下文，可以把這個傳過去
+            }),
+          });
 
-      setTimeout(() => {
-        onAddMessage({ role: 'assistant', content: randomResponse });
-        setIsTyping(false);
-        setTimeout(() => { isProcessingRef.current = false; }, 100);
-      }, 1200);
+          if (!response.ok) throw new Error('API request failed');
+
+          const data = await response.json();
+          
+          onAddMessage({ role: 'assistant', content: data.reply });
+        
+        } catch (error) {
+          console.error(error);
+          onAddMessage({ role: 'assistant', content: "抱歉，我的連線訊號有點微弱...能請你再說一次嗎？" });
+        } finally {
+          setIsTyping(false);
+          setTimeout(() => { isProcessingRef.current = false; }, 100);
+        }
+      };
+
+      fetchAIResponse();
     }
   }, [messages, isTyping, onAddMessage, journalContent]);
 
@@ -94,7 +103,6 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/20 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-2xl h-[600px] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-        {/* Header */}
         <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-[#fdfcf8]">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#2f4f2f] rounded-lg flex items-center justify-center text-white">
@@ -102,7 +110,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
             </div>
             <div>
               <h3 className="font-serif-tc font-bold text-stone-900">內在智慧羅盤</h3>
-              <p className="text-xs text-stone-500">正在聆聽並感受你的文字...</p>
+              <p className="text-xs text-stone-500">深度探索與引導</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
@@ -110,11 +118,10 @@ export const CoachModal: React.FC<CoachModalProps> = ({
           </button>
         </div>
 
-        {/* Chat Area */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#fdfcf8]">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start group'}`}>
-              <div className={`relative max-w-[85%] p-4 rounded-2xl text-base leading-relaxed font-serif-tc shadow-sm ${
+              <div className={`relative max-w-[85%] p-4 rounded-2xl text-base leading-relaxed font-serif-tc shadow-sm whitespace-pre-wrap ${
                 msg.role === 'user' 
                   ? 'bg-stone-800 text-white rounded-br-none' 
                   : 'bg-white border border-stone-200 text-stone-800 rounded-bl-none pr-10'
@@ -133,8 +140,6 @@ export const CoachModal: React.FC<CoachModalProps> = ({
               </div>
             </div>
           ))}
-          
-          {/* Typing Indicator */}
           {isTyping && (
             <div className="flex justify-start animate-in fade-in duration-300">
                <div className="bg-white border border-stone-200 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-1 items-center">
@@ -146,7 +151,6 @@ export const CoachModal: React.FC<CoachModalProps> = ({
           )}
         </div>
 
-        {/* Input Area */}
         <div className="p-4 bg-white border-t border-stone-100 flex gap-2">
           <input
             type="text"
