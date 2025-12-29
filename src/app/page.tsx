@@ -1,65 +1,276 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Save, Trash2, Calendar, Check, ArrowRight, Sparkles, ChevronRight, Bookmark } from 'lucide-react';
+import { Layout } from './components/Layout';
+import { CoachModal } from './components/CoachModal';
+import { ViewState, JournalEntry, Message } from '../types';
 
 export default function Home() {
+  const [view, setView] = useState<ViewState>('editor');
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  
+  // 編輯器狀態
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [content, setContent] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+  
+  // 教練狀態
+  const [showCoach, setShowCoach] = useState(false);
+  const [activeMessages, setActiveMessages] = useState<Message[]>([]);
+
+  // 1. 讀取資料
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('inner_compass_entries');
+      if (saved) {
+        try {
+          setEntries(JSON.parse(saved));
+        } catch (e) {
+          console.error("讀取失敗", e);
+        }
+      }
+    }
+  }, []);
+
+  // 2. 儲存資料
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('inner_compass_entries', JSON.stringify(entries));
+    }
+  }, [entries]);
+
+  // 按下儲存
+  const handleSave = () => {
+    setIsSaving(true);
+    const now = Date.now();
+    
+    const newEntry: JournalEntry = {
+      id: activeId || Math.random().toString(36).substr(2, 9),
+      date,
+      content,
+      createdAt: now,
+      hasCoachInteraction: activeMessages.length > 0,
+      messages: activeMessages
+    };
+
+    if (activeId) {
+      setEntries(prev => prev.map(e => e.id === activeId ? newEntry : e));
+    } else {
+      setEntries(prev => [newEntry, ...prev]);
+      setActiveId(newEntry.id);
+    }
+
+    setTimeout(() => {
+      setIsSaving(false);
+      setHasSaved(true);
+    }, 800);
+  };
+
+  // 打開教練
+  const handleOpenCoach = () => {
+    if (activeMessages.length === 0) {
+      const initialMsg: Message = { 
+        role: 'assistant', 
+        content: `「${content.slice(0, 10)}...」 \n\n聽起來這是一個值得深思的時刻。你現在感覺身體哪個部位最有感覺？` 
+      };
+      setActiveMessages([initialMsg]);
+      
+      if (activeId) {
+        setEntries(prev => prev.map(e => e.id === activeId ? 
+          { ...e, messages: [initialMsg], hasCoachInteraction: true } : e
+        ));
+      }
+    }
+    setShowCoach(true);
+  };
+
+  const handleUpdateMessages = (newMsg: Message) => {
+    const updatedMsgs = [...activeMessages, newMsg];
+    setActiveMessages(updatedMsgs);
+    if (activeId) {
+      setEntries(prev => prev.map(e => e.id === activeId ? 
+        { ...e, messages: updatedMsgs, hasCoachInteraction: true } : e
+      ));
+    }
+  };
+
+  // 點擊列表項目
+  const handleSelectEntry = (entry: JournalEntry) => {
+    setActiveId(entry.id);
+    setContent(entry.content);
+    setDate(entry.date);
+    setActiveMessages(entry.messages || []);
+    setHasSaved(true);
+    setView('editor');
+  };
+
+  const startNewEntry = () => {
+    setActiveId(null);
+    setContent('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setActiveMessages([]);
+    setHasSaved(false);
+    setView('editor');
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <Layout activeView={view} onNavigate={(v) => {
+      if (v === 'editor' && view !== 'editor') startNewEntry();
+      else setView(v);
+    }}>
+      
+      {/* 編輯器視圖 */}
+      {view === 'editor' && (
+        <div className="flex flex-col h-full max-w-3xl mx-auto animate-in fade-in duration-700">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-stone-200 gap-4 mt-4 md:mt-0">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">
+                回顧思緒
+              </h1>
+              <p className="text-stone-500 font-serif-tc italic text-sm">
+                讓文字流淌，承接你的所有心情。
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-end md:self-auto">
+              <div className="flex items-center bg-white border border-stone-200 rounded-lg px-3 py-2 shadow-sm">
+                <Calendar className="w-4 h-4 text-stone-400 mr-2" />
+                <input 
+                  type="date" 
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="bg-transparent text-sm text-stone-600 outline-none font-serif-tc min-w-[100px]"
+                />
+              </div>
+              
+              {activeId && (
+                <button 
+                  onClick={() => {
+                    setEntries(prev => prev.filter(e => e.id !== activeId));
+                    startNewEntry();
+                  }}
+                  className="p-2.5 text-stone-400 hover:text-red-500 hover:bg-stone-100 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+
+              <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-all shadow-sm font-serif-tc text-sm min-w-[100px] justify-center ${
+                   hasSaved 
+                     ? 'bg-stone-100 text-stone-600 hover:bg-stone-200' 
+                     : 'bg-[#9e9a93] text-white hover:bg-[#8c8881]'
+                }`}
+              >
+                {isSaving ? <span className="animate-spin">⟳</span> : (hasSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />)}
+                {isSaving ? '儲存中' : (hasSaved ? '已儲存' : '儲存')}
+              </button>
+            </div>
+          </div>
+
+          {hasSaved && (
+            <div className="flex justify-end gap-3 mb-6 animate-in slide-in-from-top-2 fade-in duration-500">
+              <button 
+                onClick={() => setView('list')}
+                className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-lg text-sm hover:bg-white transition-colors font-serif-tc"
+              >
+                <ArrowRight className="w-4 h-4" />
+                結束
+              </button>
+              <button 
+                onClick={handleOpenCoach}
+                className="flex items-center gap-2 px-4 py-2 bg-[#2f4f2f] text-white rounded-lg text-sm hover:bg-[#1f351f] shadow-md transition-all font-serif-tc"
+              >
+                <Sparkles className="w-4 h-4" />
+                召喚智慧
+              </button>
+            </div>
+          )}
+
+          <div className="flex-1 relative min-h-[60vh]">
+            <textarea
+              value={content}
+              onChange={(e) => { 
+                setContent(e.target.value); 
+                if (hasSaved) setHasSaved(false); 
+              }}
+              placeholder="發生了什麼事？現在感覺如何？這裡沒有對錯..."
+              className="w-full h-full bg-transparent resize-none outline-none text-xl leading-relaxed text-stone-700 placeholder:text-stone-300 font-serif-tc p-2 focus:bg-white/50 transition-colors rounded-xl"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <div className="absolute bottom-4 right-0 opacity-20 pointer-events-none">
+               <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs font-serif-tc">
+                 N
+               </div>
+            </div>
+          </div>
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* 列表視圖 */}
+      {view === 'list' && (
+        <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
+          <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
+             <h1 className="text-3xl font-serif-tc font-bold text-stone-900">日記列表</h1>
+             <p className="text-stone-400 text-sm mt-1">總計 {entries.length} 篇</p>
+          </div>
+          <div className="space-y-4">
+            {entries.length === 0 ? (
+               <div className="text-stone-300 text-center py-20 font-serif-tc">還沒有任何紀錄。開始寫下你的第一篇日記吧...</div>
+            ) : (
+              entries.map(entry => (
+                <div 
+                  key={entry.id} 
+                  onClick={() => handleSelectEntry(entry)}
+                  className="group bg-white p-6 rounded-xl shadow-sm border border-stone-100 hover:shadow-md transition-all cursor-pointer flex gap-6 items-start"
+                >
+                  <div className="flex flex-col items-center min-w-[60px]">
+                    <div className="w-8 h-8 rounded-full border border-stone-300 flex items-center justify-center text-stone-500 text-xs font-serif-tc mb-2 group-hover:bg-stone-900 group-hover:text-white transition-colors">
+                      {entry.date.split('-')[2]}
+                    </div>
+                    <span className="text-[10px] text-stone-400">{entry.date.split('-')[0]}-{entry.date.split('-')[1]}</span>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-serif-tc font-bold text-lg text-stone-800 line-clamp-1">{entry.date}</h3>
+                      {entry.hasCoachInteraction && (
+                        <span className="px-2 py-0.5 bg-[#f0fdf4] text-[#15803d] text-[10px] rounded-full border border-[#bbf7d0]">已開啟對話</span>
+                      )}
+                    </div>
+                    <p className="text-stone-500 font-serif-tc line-clamp-2 leading-relaxed text-sm">
+                      {entry.content}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-stone-300 group-hover:text-stone-600" />
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 典藏視圖 */}
+      {view === 'collections' && (
+         <div className="max-w-3xl mx-auto animate-in fade-in">
+            <h1 className="text-3xl font-serif-tc font-bold text-stone-900 mb-8 border-b border-stone-200 pb-4 mt-4 md:mt-0">典藏</h1>
+            <div className="text-center py-20">
+               <Bookmark className="w-12 h-12 text-stone-200 mx-auto mb-4" />
+               <p className="text-stone-400 font-serif-tc">尚無典藏...</p>
+            </div>
+         </div>
+      )}
+
+      {showCoach && (
+        <CoachModal 
+          messages={activeMessages} 
+          onClose={() => setShowCoach(false)} 
+          onAddMessage={handleUpdateMessages}
+        />
+      )}
+    </Layout>
   );
 }
