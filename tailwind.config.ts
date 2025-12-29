@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#fdfcf8", // 這是我們指定的米色背景
+        paper: "#fdfcf8",
       },
       fontFamily: {
         "serif-tc": ["var(--font-noto-serif-tc)", "serif"],
