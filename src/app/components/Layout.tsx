@@ -1,17 +1,16 @@
 import React from 'react';
-import { PenLine, Book, Bookmark, MessageSquare } from 'lucide-react'; // ✨ 新增 MessageSquare import
-import { ViewState } from '../../types';
+import { PenLine, Book, Bookmark, MessageSquare, BookOpen } from 'lucide-react';
+import { ViewState } from '@/types';
 
 interface LayoutProps {
   activeView: ViewState;
   onNavigate: (view: ViewState) => void;
-  onFeedbackClick: () => void; // ✨ 新增：接收點擊回饋按鈕的事件
+  onFeedbackClick: () => void;
   children: React.ReactNode;
 }
 
 export function Layout({ activeView, onNavigate, onFeedbackClick, children }: LayoutProps) {
   
-  // 定義導航項目
   const navItems = [
     { id: 'editor', icon: PenLine, label: '書寫', view: 'editor' as ViewState },
     { id: 'list', icon: Book, label: '日記', view: 'list' as ViewState },
@@ -20,31 +19,33 @@ export function Layout({ activeView, onNavigate, onFeedbackClick, children }: La
 
   return (
     <div className="flex h-screen bg-[#fcfaf8] text-stone-900 font-serif-tc overflow-hidden selection:bg-[#2f4f2f] selection:text-white">
-      {/* 側邊欄 */}
-      <aside className="w-20 md:w-64 bg-white border-r border-stone-200 flex flex-col items-center md:items-stretch py-8 z-20 transition-all duration-300">
+      {/* 側邊欄：固定寬度 w-20 */}
+      <aside className="w-20 bg-white border-r border-stone-200 flex flex-col items-center py-8 z-20 shrink-0">
         
-        {/* Logo 區塊 */}
-        <div className="mb-12 px-0 md:px-8 flex justify-center md:justify-start">
-          <div className="w-10 h-10 bg-[#2f4f2f] rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
-            IC
+        {/* ✨ Logo 區塊：恢復「書本圖示 + 垂直文字」組合 */}
+        <div className="mb-12 flex flex-col items-center gap-4">
+          {/* 書本圖示容器 */}
+          <div className="w-10 h-10 bg-[#1c1917] rounded-xl flex items-center justify-center text-white shadow-md">
+            <BookOpen className="w-6 h-6" strokeWidth={2} />
           </div>
-          <span className="hidden md:block ml-3 font-bold text-xl tracking-wider text-[#2f4f2f] self-center">
-            INNER
+          {/* 垂直質感文字 */}
+          <span className="[writing-mode:vertical-lr] text-[10px] tracking-[0.3em] text-stone-400 font-serif rotate-180 select-none cursor-default">
+            INNER COMPASS
           </span>
         </div>
 
-        {/* 導航選單 */}
-        <nav className="flex-1 w-full px-2 md:px-4 space-y-2">
+        {/* 導航選單：純 Icon */}
+        <nav className="flex-1 w-full flex flex-col items-center gap-6">
           {navItems.map((item) => {
             const isActive = activeView === item.view;
             return (
               <button
                 key={item.id}
                 onClick={() => onNavigate(item.view)}
-                className={`w-full flex items-center justify-center md:justify-start p-3 rounded-xl transition-all duration-200 group relative
+                className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 group
                   ${isActive 
-                    ? 'bg-[#f4f1ee] text-[#2f4f2f]' 
-                    : 'text-stone-400 hover:bg-stone-50 hover:text-stone-600'
+                    ? 'text-[#1c1917]' 
+                    : 'text-stone-300 hover:bg-stone-50 hover:text-stone-600'
                   }`}
                 title={item.label}
               >
@@ -52,30 +53,24 @@ export function Layout({ activeView, onNavigate, onFeedbackClick, children }: La
                   className={`w-6 h-6 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`hidden md:block ml-3 text-sm font-medium tracking-wide ${isActive ? 'font-bold' : ''}`}>
-                  {item.label}
-                </span>
                 
-                {/* 活躍狀態的指示條 (Mobile only) */}
+                {/* 活躍狀態的小圓點指示 */}
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#2f4f2f] rounded-r-full md:hidden" />
+                  <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-1 h-1 bg-[#1c1917] rounded-full" />
                 )}
               </button>
             );
           })}
         </nav>
 
-        {/* ✨ 新增：側邊欄底部的回饋按鈕 */}
-        <div className="mt-auto px-2 md:px-4 pb-4 w-full">
+        {/* 底部回饋按鈕：純 Icon */}
+        <div className="mt-auto pb-4">
           <button
             onClick={onFeedbackClick}
-            className="w-full flex items-center justify-center md:justify-start p-3 rounded-xl text-stone-400 hover:text-[#2f4f2f] hover:bg-stone-50 transition-all duration-200 group"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-300 hover:text-[#1c1917] hover:bg-stone-50 transition-all duration-300"
             title="意見回饋"
           >
-            <MessageSquare className="w-6 h-6 group-hover:scale-105 transition-transform" />
-            <span className="hidden md:block ml-3 text-sm font-medium tracking-wide">
-              回饋
-            </span>
+            <MessageSquare className="w-6 h-6" strokeWidth={2} />
           </button>
         </div>
       </aside>

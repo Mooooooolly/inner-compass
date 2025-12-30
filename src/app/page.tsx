@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, LogOut, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, X, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '../types';
@@ -111,12 +111,16 @@ const FeedbackModal = ({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 border border-stone-100 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><LogOut className="w-5 h-5 rotate-180" /></button>
+        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><X className="w-5 h-5 rotate-180" /></button>
         
         <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-[#2f4f2f]" /> 意見回饋
         </h3>
-        <p className="text-stone-500 font-serif-tc text-sm mb-4">有任何想法或建議嗎？請告訴我們，幫助這裡變得更好。</p>
+        <p className="text-stone-500 font-serif-tc text-sm mb-4">
+          歡迎任何想法，一起讓這裡變得更好
+          <br />
+          也可以留下聯絡方式，或許我們能有更多討論
+          </p>
         
         {status === 'success' ? (
           <div className="bg-green-50 text-green-700 p-4 rounded-lg flex items-center justify-center gap-2 font-serif-tc min-h-[120px]">
@@ -342,7 +346,7 @@ export default function Home() {
                 className="p-2.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                 title="結束編輯"
               >
-                <LogOut className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -380,7 +384,6 @@ export default function Home() {
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">日記列表</h1>
-             <p className="text-stone-400 text-sm mt-1">依照日期排序</p>
           </div>
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
