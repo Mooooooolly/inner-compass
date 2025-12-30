@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, ArrowRight, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, X, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '../types';
 
-// ✨ 通用警告視窗元件 (保持不變)
+// ✨ 通用警告視窗元件
 const WarningModal = ({ 
   isOpen, 
   onClose, 
@@ -60,7 +60,6 @@ const WarningModal = ({
 };
 
 // 🛠️ 輔助函式：格式化「最後更新時間」
-// 顯示範例：12/30 14:30
 const formatUpdateTime = (timestamp: number) => {
   const d = new Date(timestamp);
   return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -118,13 +117,12 @@ export default function Home() {
     setIsSaving(true);
     const now = Date.now();
     
-    // 這裡我們同時紀錄 createdAt (若無) 和 updatedAt
     const newEntry: JournalEntry = {
       id: activeId || Math.random().toString(36).substr(2, 9),
-      date, // 這是使用者選的「日記日期」
+      date,
       content,
       createdAt: activeId ? (entries.find(e => e.id === activeId)?.createdAt || now) : now,
-      updatedAt: now, // ✨ 這是系統紀錄的「最後更新時間」
+      updatedAt: now,
       hasCoachInteraction: activeMessages.length > 0,
       messages: activeMessages
     };
@@ -152,7 +150,7 @@ export default function Home() {
       
       if (activeId) {
         setEntries(prevEntries => prevEntries.map(e => e.id === activeId ? 
-          { ...e, messages: updatedMsgs, hasCoachInteraction: true, updatedAt: Date.now() } : e // 對話也算更新
+          { ...e, messages: updatedMsgs, hasCoachInteraction: true, updatedAt: Date.now() } : e
         ));
       }
       return updatedMsgs;
@@ -192,15 +190,12 @@ export default function Home() {
     setView('editor');
   };
 
-  // 🔍 排序邏輯：依照「日記日期 (date)」降冪排序 (最新的日子在上面)
-  // 如果日期一樣，則比較最後更新時間
   const sortedEntries = [...entries].sort((a, b) => {
     const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
     if (dateDiff !== 0) return dateDiff;
     return (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt);
   });
 
-  // 🔍 典藏排序：同樣依照原始日記日期排序
   const allBookmarks = sortedEntries.flatMap(entry => 
     (entry.messages || [])
       .filter(m => m.isBookmarked)
@@ -224,11 +219,13 @@ export default function Home() {
               <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">回顧思緒</h1>
               <p className="text-stone-500 font-serif-tc italic text-sm">讓文字流淌，承接你的所有心情。</p>
             </div>
-            <div className="flex items-center gap-2 self-end md:self-auto">
+            {/* ✨ 工具列區塊：加入 flex-wrap 以適應小螢幕 */}
+            <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
               <div className="flex items-center bg-white border border-stone-200 rounded-lg px-3 py-2 shadow-sm">
                 <Calendar className="w-4 h-4 text-stone-400 mr-2" />
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent text-sm text-stone-600 outline-none font-serif-tc min-w-[100px]" />
               </div>
+              
               {activeId && (
                 <button 
                   onClick={() => checkNavigation(() => {
@@ -241,21 +238,24 @@ export default function Home() {
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
+              
               <button onClick={handleSave} disabled={isSaving} className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-all shadow-sm font-serif-tc text-sm min-w-[100px] justify-center ${hasSaved ? 'bg-stone-100 text-stone-600 hover:bg-stone-200' : 'bg-[#9e9a93] text-white hover:bg-[#8c8881]'}`}>
                 {isSaving ? <span className="animate-spin">⟳</span> : (hasSaved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />)}
                 {isSaving ? '儲存中' : (hasSaved ? '已儲存' : '儲存')}
               </button>
+
+              {/* ✨ 新增：整合進來的「結束」按鈕 (純 icon 版) */}
+              <button 
+                onClick={() => checkNavigation(() => setView('list'), 'unsaved')} 
+                className="p-2.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                title="結束編輯"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
           
-          <div className="flex justify-end gap-3 mb-6 animate-in slide-in-from-top-2 fade-in duration-500">
-            <button 
-              onClick={() => checkNavigation(() => setView('list'), 'unsaved')} 
-              className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-lg text-sm hover:bg-white transition-colors font-serif-tc"
-            >
-              <ArrowRight className="w-4 h-4" /> 結束
-            </button>
-          </div>
+          {/* 🗑️ 已移除：原本下方的獨立結束按鈕區塊 */}
 
           <div className="flex-1 relative min-h-[60vh]">
             <textarea 
@@ -294,9 +294,11 @@ export default function Home() {
           </div>
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
-               <div className="text-stone-300 text-center py-20 font-serif-tc">還沒有任何紀錄。開始寫下你的第一篇日記吧...</div>
+               <div className="text-center py-20">
+                 <Book className="w-12 h-12 text-stone-200 mx-auto mb-4" />
+                 <p className="text-stone-400 font-serif-tc">還沒有任何紀錄。開始寫下你的第一篇日記吧...</p>
+               </div>
             ) : (
-              // ✨ 這裡改成使用 sortedEntries 進行渲染
               sortedEntries.map(entry => (
                 <div key={entry.id} onClick={() => handleSelectEntry(entry)} className="group bg-white p-6 rounded-xl shadow-sm border border-stone-100 hover:shadow-md transition-all cursor-pointer flex gap-6 items-start">
                   <div className="flex flex-col items-center min-w-[60px]">
@@ -309,8 +311,6 @@ export default function Home() {
                         <h3 className="font-serif-tc font-bold text-lg text-stone-800 line-clamp-1">{entry.date}</h3>
                         {entry.hasCoachInteraction && <span className="px-2 py-0.5 bg-[#f0fdf4] text-[#15803d] text-[10px] rounded-full border border-[#bbf7d0]">已開啟對話</span>}
                       </div>
-                      
-                      {/* ✨ 顯示淡淡的更新時間 (若無 updatedAt 則顯示 createdAt) */}
                       <div className="flex items-center gap-1 text-[10px] text-stone-300">
                         <Clock className="w-3 h-3" />
                         <span>編輯於 {formatUpdateTime(entry.updatedAt || entry.createdAt)}</span>

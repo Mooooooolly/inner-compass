@@ -71,7 +71,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
     // 1. ✨ 自動開場：如果是空白對話，發送一個「隱藏指令」讓 AI 開場
     if (messages.length === 0 && !isProcessingRef.current) {
       // 這裡傳送的文字是給 AI 看的提示，不會顯示在對話框中（因為這是 assistant 的第一句話）
-      const systemPrompt = "（請閱讀我的日記，並給我一個簡短、溫暖的開場提問，引導我探索這份感受。可以適時同理我的感受，或引用部分日記內容，但不要說你好。）";
+      const systemPrompt = "（請閱讀我的日記，並給我一個簡短、溫暖的開場提問，引導我探索這份感受。可以適時同理我的感受，或引用部分日記內容，若日記是一片空白，還是可以從「空白」提問，但不要說你好，也不會使用「您」。）";
       callAI(systemPrompt);
     }
 
