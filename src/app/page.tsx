@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, X, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, LogOut, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '../types';
@@ -59,7 +59,94 @@ const WarningModal = ({
   );
 };
 
-// 🛠️ 輔助函式：格式化「最後更新時間」
+// 📧 回饋表單視窗 (使用 Web3Forms)
+const FeedbackModal = ({ 
+  isOpen, 
+  onClose 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) => {
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async () => {
+    if (!message.trim()) return;
+    setStatus('sending');
+
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // 👇 記得確認這裡是否已填入您的 Key
+          access_key: 'c20d535e-a4b3-4007-b0da-4474e904cba7', 
+          subject: 'Inner Compass 使用者回饋',
+          message: message,
+          email: 'anonymous@inner-compass.app'
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setStatus('success');
+        setTimeout(() => {
+          onClose();
+          setStatus('idle');
+          setMessage('');
+        }, 2000);
+      } else {
+        console.error(result);
+        setStatus('error');
+      }
+    } catch (e) {
+      console.error(e);
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 border border-stone-100 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><LogOut className="w-5 h-5 rotate-180" /></button>
+        
+        <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2 flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-[#2f4f2f]" /> 意見回饋
+        </h3>
+        <p className="text-stone-500 font-serif-tc text-sm mb-4">有任何想法或建議嗎？請告訴我們，幫助這裡變得更好。</p>
+        
+        {status === 'success' ? (
+          <div className="bg-green-50 text-green-700 p-4 rounded-lg flex items-center justify-center gap-2 font-serif-tc min-h-[120px]">
+            <Check className="w-5 h-5" /> 發送成功！謝謝你的回饋。
+          </div>
+        ) : (
+          <>
+            <textarea 
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="請輸入您的建議..."
+              className="w-full h-32 p-3 bg-stone-50 rounded-lg border border-stone-200 focus:ring-1 focus:ring-stone-300 outline-none resize-none font-serif-tc text-stone-700 mb-4"
+              disabled={status === 'sending'}
+            />
+            <button 
+              onClick={handleSubmit}
+              disabled={!message.trim() || status === 'sending'}
+              className="w-full py-2.5 bg-stone-900 text-white rounded-lg font-serif-tc hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {status === 'sending' ? <><Loader2 className="w-4 h-4 animate-spin" /> 發送中...</> : '傳送回饋'}
+            </button>
+            {status === 'error' && <p className="text-red-500 text-xs mt-2 text-center font-serif-tc">發送失敗，請稍後再試。</p>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 🛠️ 輔助函式
 const formatUpdateTime = (timestamp: number) => {
   const d = new Date(timestamp);
   return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
@@ -81,6 +168,8 @@ export default function Home() {
   const [showWarning, setShowWarning] = useState(false);
   const [warningType, setWarningType] = useState<'unsaved' | 'delete'>('unsaved');
   const [pendingAction, setPendingAction] = useState<() => void>(() => {});
+
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -211,6 +300,8 @@ export default function Home() {
           else setView(v);
         }, 'unsaved');
       }}
+      // ✨ 關鍵修改：將控制回饋視窗的函式傳遞給 Layout
+      onFeedbackClick={() => setShowFeedback(true)}
     >
       {view === 'editor' && (
         <div className="flex flex-col h-full max-w-3xl mx-auto animate-in fade-in duration-700">
@@ -219,7 +310,7 @@ export default function Home() {
               <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">回顧思緒</h1>
               <p className="text-stone-500 font-serif-tc italic text-sm">讓文字流淌，承接你的所有心情。</p>
             </div>
-            {/* ✨ 工具列區塊：加入 flex-wrap 以適應小螢幕 */}
+            {/* ✨ 工具列區塊 */}
             <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
               <div className="flex items-center bg-white border border-stone-200 rounded-lg px-3 py-2 shadow-sm">
                 <Calendar className="w-4 h-4 text-stone-400 mr-2" />
@@ -244,19 +335,18 @@ export default function Home() {
                 {isSaving ? '儲存中' : (hasSaved ? '已儲存' : '儲存')}
               </button>
 
-              {/* ✨ 新增：整合進來的「結束」按鈕 (純 icon 版) */}
+              {/* ⚠️ 已移除：原本這裡的回饋按鈕，現在移到側邊欄了 */}
+
               <button 
                 onClick={() => checkNavigation(() => setView('list'), 'unsaved')} 
                 className="p-2.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                 title="結束編輯"
               >
-                <X className="w-5 h-5" />
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
           
-          {/* 🗑️ 已移除：原本下方的獨立結束按鈕區塊 */}
-
           <div className="flex-1 relative min-h-[60vh]">
             <textarea 
               value={content} 
@@ -368,6 +458,11 @@ export default function Home() {
           setShowWarning(false);
           pendingAction();
         }}
+      />
+
+      <FeedbackModal 
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
       />
     </Layout>
   );
