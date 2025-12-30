@@ -24,73 +24,63 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
 
+  // 自動捲動
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
 
+  // 🧠 AI 核心邏輯
   useEffect(() => {
-    // 1. 開場白 (維持原樣，因為這樣最快最穩)
-    if (messages.length === 0 && !isProcessingRef.current) {
+    // 定義一個共用的 API 呼叫函式
+    const callAI = async (userMessage: string) => {
       isProcessingRef.current = true;
       setIsTyping(true);
 
-      setTimeout(() => {
-        const snippet = journalContent.slice(0, 15) + (journalContent.length > 15 ? "..." : "");
-        const greeting = journalContent.trim() 
-          ? `我讀了你寫的「${snippet}」。\n\n這段文字裡似乎藏著一些情緒，你現在感覺身體哪個部位最有感覺？`
-          : "我看見你打開了日記，但還沒寫下文字。現在的心情還好嗎？想聊聊嗎？";
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userMessage,
+            journalContent: journalContent,
+          }),
+        });
 
-        onAddMessage({ role: 'assistant', content: greeting });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.reply || `API 請求失敗 (${response.status})`);
+        }
+        
+        onAddMessage({ role: 'assistant', content: data.reply });
+      
+      } catch (error: any) {
+        console.error(error);
+        onAddMessage({ 
+          role: 'assistant', 
+          content: `(系統訊息) ${error.message || "抱歉，連線發生未知錯誤。"}` 
+        });
+      } finally {
         setIsTyping(false);
         setTimeout(() => { isProcessingRef.current = false; }, 100);
-      }, 1500);
+      }
+    };
+
+    // 1. ✨ 自動開場：如果是空白對話，發送一個「隱藏指令」讓 AI 開場
+    if (messages.length === 0 && !isProcessingRef.current) {
+      // 這裡傳送的文字是給 AI 看的提示，不會顯示在對話框中（因為這是 assistant 的第一句話）
+      const systemPrompt = "（請閱讀我的日記，並直接給我一個簡短、溫暖的開場提問，引導我探索這份感受。請直接提問，不要複述日記內容，也不要說你好。）";
+      callAI(systemPrompt);
     }
 
-    // 2. 使用者回覆後 -> 呼叫真實 AI API 🚀
+    // 2. 💬 使用者回覆後：正常的對話流程
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'user' && !isTyping && !isProcessingRef.current) {
-      isProcessingRef.current = true;
-      setIsTyping(true);
-
-      const fetchAIResponse = async () => {
-        try {
-          const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: lastMsg.content,
-              journalContent: journalContent,
-            }),
-          });
-
-          // 🟡 修正點：先讀取後端回傳的 JSON，再檢查 response.ok
-          const data = await response.json();
-
-          if (!response.ok) {
-            // 如果後端報錯，直接把後端給的錯誤訊息 (data.reply) 丟出來
-            // 這樣我們就能在聊天視窗看到到底是 "404" 還是 "ApiKey 無效"
-            throw new Error(data.reply || `API 請求失敗 (${response.status})`);
-          }
-          
-          onAddMessage({ role: 'assistant', content: data.reply });
-        
-        } catch (error: any) {
-          console.error(error);
-          // 把具體的錯誤訊息顯示給使用者看
-          onAddMessage({ 
-            role: 'assistant', 
-            content: `(系統訊息) ${error.message || "抱歉，連線發生未知錯誤。"}` 
-          });
-        } finally {
-          setIsTyping(false);
-          setTimeout(() => { isProcessingRef.current = false; }, 100);
-        }
-      };
-
-      fetchAIResponse();
+      callAI(lastMsg.content);
     }
+
   }, [messages, isTyping, onAddMessage, journalContent]);
 
   const handleSend = () => {
