@@ -56,26 +56,33 @@ export const CoachModal: React.FC<CoachModalProps> = ({
 
       const fetchAIResponse = async () => {
         try {
-          // 呼叫我們剛剛寫好的後端
           const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message: lastMsg.content,
               journalContent: journalContent,
-              // history: messages // 如果未來要讓 AI 記得上下文，可以把這個傳過去
             }),
           });
 
-          if (!response.ok) throw new Error('API request failed');
-
+          // 🟡 修正點：先讀取後端回傳的 JSON，再檢查 response.ok
           const data = await response.json();
+
+          if (!response.ok) {
+            // 如果後端報錯，直接把後端給的錯誤訊息 (data.reply) 丟出來
+            // 這樣我們就能在聊天視窗看到到底是 "404" 還是 "ApiKey 無效"
+            throw new Error(data.reply || `API 請求失敗 (${response.status})`);
+          }
           
           onAddMessage({ role: 'assistant', content: data.reply });
         
-        } catch (error) {
+        } catch (error: any) {
           console.error(error);
-          onAddMessage({ role: 'assistant', content: "抱歉，我的連線訊號有點微弱...能請你再說一次嗎？" });
+          // 把具體的錯誤訊息顯示給使用者看
+          onAddMessage({ 
+            role: 'assistant', 
+            content: `(系統訊息) ${error.message || "抱歉，連線發生未知錯誤。"}` 
+          });
         } finally {
           setIsTyping(false);
           setTimeout(() => { isProcessingRef.current = false; }, 100);

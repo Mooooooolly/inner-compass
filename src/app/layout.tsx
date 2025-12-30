@@ -21,7 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW">
-      <body className={`${notoSerifTC.variable} font-serif-tc antialiased bg-[#fdfcf8] text-stone-900`}>
+      <body
+        className={`${notoSerifTC.variable} font-serif-tc antialiased bg-[#fdfcf8] text-stone-900`}
+        suppressHydrationWarning // 👈 加上這一行，就能忽略外掛造成的錯誤
+      >
         {children}
       </body>
     </html>
