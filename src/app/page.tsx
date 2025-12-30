@@ -1,10 +1,63 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, ArrowRight, Sparkles, ChevronRight, Bookmark, Quote } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, ArrowRight, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, X } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '../types';
+
+// ✨ 新增：通用警告視窗元件
+const WarningModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  type 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void;
+  type: 'unsaved' | 'delete';
+}) => {
+  if (!isOpen) return null;
+
+  const isDelete = type === 'delete';
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200 border border-stone-100">
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDelete ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-500'}`}>
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2">
+          {isDelete ? '確定要刪除嗎？' : '尚未儲存'}
+        </h3>
+        <p className="text-stone-500 font-serif-tc text-sm leading-relaxed mb-6">
+          {isDelete 
+            ? '此動作無法復原，這篇日記將會永遠消失。' 
+            : '您有尚未儲存的內容，若現在離開，剛才寫下的文字將會遺失。'}
+        </p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-lg border border-stone-200 text-stone-600 font-serif-tc hover:bg-stone-50 transition-colors"
+          >
+            取消
+          </button>
+          <button 
+            onClick={onConfirm}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-white font-serif-tc shadow-sm transition-all ${
+              isDelete 
+                ? 'bg-red-500 hover:bg-red-600' 
+                : 'bg-stone-900 hover:bg-stone-800'
+            }`}
+          >
+            {isDelete ? '確認刪除' : '確定離開'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function Home() {
   const [view, setView] = useState<ViewState>('editor');
@@ -18,6 +71,11 @@ export default function Home() {
   
   const [showCoach, setShowCoach] = useState(false);
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
+
+  // 🛡️ 新增：警告視窗狀態管理
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningType, setWarningType] = useState<'unsaved' | 'delete'>('unsaved');
+  const [pendingAction, setPendingAction] = useState<() => void>(() => {});
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -37,6 +95,21 @@ export default function Home() {
       localStorage.setItem('inner_compass_entries', JSON.stringify(entries));
     }
   }, [entries]);
+
+  // 判斷是否為「髒」狀態 (有內容且未儲存)
+  const isDirty = !hasSaved && content.trim().length > 0;
+
+  // 🧭 通用導航檢查器
+  const checkNavigation = (action: () => void, type: 'unsaved' | 'delete' = 'unsaved') => {
+    // 只有在編輯模式且有未儲存內容時才攔截 (如果是刪除操作，則總是攔截)
+    if ((view === 'editor' && isDirty) || type === 'delete') {
+      setPendingAction(() => action);
+      setWarningType(type);
+      setShowWarning(true);
+    } else {
+      action();
+    }
+  };
 
   const handleSave = () => {
     setIsSaving(true);
@@ -65,12 +138,9 @@ export default function Home() {
   };
 
   const handleOpenCoach = () => {
-    // 移除這裡的 initialMsg 邏輯
-    // 直接打開視窗，讓 CoachModal 內部的 useEffect 去處理「第一次見面」的開場白
     setShowCoach(true);
   };
 
-  // 🛡️ 更強壯的更新邏輯
   const handleUpdateMessages = (newMsg: Message) => {
     setActiveMessages(prev => {
       const updatedMsgs = [...prev, newMsg];
@@ -100,6 +170,7 @@ export default function Home() {
   };
 
   const handleSelectEntry = (entry: JournalEntry) => {
+    // 從列表點擊進入日記，不需要警告，因為列表模式下沒有「未儲存」的狀態
     setActiveId(entry.id);
     setContent(entry.content);
     setDate(entry.date);
@@ -124,10 +195,16 @@ export default function Home() {
   );
 
   return (
-    <Layout activeView={view} onNavigate={(v) => {
-      if (v === 'editor' && view !== 'editor') startNewEntry();
-      else setView(v);
-    }}>
+    <Layout 
+      activeView={view} 
+      onNavigate={(v) => {
+        // 🛡️ 攔截側邊欄導航
+        checkNavigation(() => {
+          if (v === 'editor' && view !== 'editor') startNewEntry();
+          else setView(v);
+        }, 'unsaved');
+      }}
+    >
       {view === 'editor' && (
         <div className="flex flex-col h-full max-w-3xl mx-auto animate-in fade-in duration-700">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-stone-200 gap-4 mt-4 md:mt-0">
@@ -141,7 +218,14 @@ export default function Home() {
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent text-sm text-stone-600 outline-none font-serif-tc min-w-[100px]" />
               </div>
               {activeId && (
-                <button onClick={() => { setEntries(prev => prev.filter(e => e.id !== activeId)); startNewEntry(); }} className="p-2.5 text-stone-400 hover:text-red-500 hover:bg-stone-100 rounded-lg transition-colors">
+                <button 
+                  onClick={() => checkNavigation(() => {
+                    setEntries(prev => prev.filter(e => e.id !== activeId)); 
+                    startNewEntry();
+                  }, 'delete')}
+                  className="p-2.5 text-stone-400 hover:text-red-500 hover:bg-stone-100 rounded-lg transition-colors"
+                  title="刪除日記"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
@@ -151,21 +235,43 @@ export default function Home() {
               </button>
             </div>
           </div>
-          {hasSaved && (
-            <div className="flex justify-end gap-3 mb-6 animate-in slide-in-from-top-2 fade-in duration-500">
-              <button onClick={() => setView('list')} className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-lg text-sm hover:bg-white transition-colors font-serif-tc">
-                <ArrowRight className="w-4 h-4" /> 結束
-              </button>
-              <button onClick={handleOpenCoach} className="flex items-center gap-2 px-4 py-2 bg-[#2f4f2f] text-white rounded-lg text-sm hover:bg-[#1f351f] shadow-md transition-all font-serif-tc">
-                <Sparkles className="w-4 h-4" /> 召喚智慧
-              </button>
-            </div>
-          )}
+          
+          {/* 調整按鈕區塊：讓「結束」按鈕總是可見，但加上防呆 */}
+          <div className="flex justify-end gap-3 mb-6 animate-in slide-in-from-top-2 fade-in duration-500">
+            <button 
+              onClick={() => checkNavigation(() => setView('list'), 'unsaved')} 
+              className="flex items-center gap-2 px-4 py-2 border border-stone-200 text-stone-600 rounded-lg text-sm hover:bg-white transition-colors font-serif-tc"
+            >
+              <ArrowRight className="w-4 h-4" /> 結束
+            </button>
+          </div>
+
           <div className="flex-1 relative min-h-[60vh]">
-            <textarea value={content} onChange={(e) => { setContent(e.target.value); if (hasSaved) setHasSaved(false); }} placeholder="發生了什麼事？現在感覺如何？這裡沒有對錯..." className="w-full h-full bg-transparent resize-none outline-none text-xl leading-relaxed text-stone-700 placeholder:text-stone-300 font-serif-tc p-2 focus:bg-white/50 transition-colors rounded-xl" />
-            <div className="absolute bottom-4 right-0 opacity-20 pointer-events-none">
-               <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs font-serif-tc">N</div>
-            </div>
+            <textarea 
+              value={content} 
+              onChange={(e) => { 
+                setContent(e.target.value); 
+                if (hasSaved) setHasSaved(false); 
+              }} 
+              placeholder="寫下你的想法，讓內在智慧陪你探索..." 
+              className="w-full h-full bg-transparent resize-none outline-none text-xl leading-relaxed text-stone-700 placeholder:text-stone-300 font-serif-tc p-2 focus:bg-white/50 transition-colors rounded-xl" 
+            />
+            
+            {hasSaved && (
+              <div className="absolute bottom-4 right-4 z-20 animate-in zoom-in-50 duration-300">
+                 <button 
+                   onClick={handleOpenCoach}
+                   className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-[#2f4f2f] text-white shadow-xl hover:scale-110 transition-all duration-300"
+                   title="召喚內在智慧"
+                 >
+                   <div className="absolute inset-0 rounded-full bg-[#2f4f2f] blur opacity-40 group-hover:opacity-70 animate-pulse transition-opacity"></div>
+                   <Sparkles className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform" />
+                 </button>
+                 <div className="absolute bottom-16 right-0 w-max bg-stone-800 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none mb-2 mr-[-10px]">
+                   與 AI 教練對話
+                 </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -224,7 +330,6 @@ export default function Home() {
          </div>
       )}
       
-      {/* ⚠️ 這裡改動了：把 journalContent (日記內容) 傳進去 */}
       {showCoach && (
         <CoachModal 
           messages={activeMessages} 
@@ -234,6 +339,17 @@ export default function Home() {
           journalContent={content} 
         />
       )}
+
+      {/* ⚠️ 警告視窗元件插入點 */}
+      <WarningModal 
+        isOpen={showWarning}
+        type={warningType}
+        onClose={() => setShowWarning(false)}
+        onConfirm={() => {
+          setShowWarning(false);
+          pendingAction();
+        }}
+      />
     </Layout>
   );
 }
