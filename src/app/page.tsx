@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, ArrowRight, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, X } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, ArrowRight, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '../types';
 
-// ✨ 新增：通用警告視窗元件
+// ✨ 通用警告視窗元件 (保持不變)
 const WarningModal = ({ 
   isOpen, 
   onClose, 
@@ -59,6 +59,13 @@ const WarningModal = ({
   );
 };
 
+// 🛠️ 輔助函式：格式化「最後更新時間」
+// 顯示範例：12/30 14:30
+const formatUpdateTime = (timestamp: number) => {
+  const d = new Date(timestamp);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+};
+
 export default function Home() {
   const [view, setView] = useState<ViewState>('editor');
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -72,7 +79,6 @@ export default function Home() {
   const [showCoach, setShowCoach] = useState(false);
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
 
-  // 🛡️ 新增：警告視窗狀態管理
   const [showWarning, setShowWarning] = useState(false);
   const [warningType, setWarningType] = useState<'unsaved' | 'delete'>('unsaved');
   const [pendingAction, setPendingAction] = useState<() => void>(() => {});
@@ -96,12 +102,9 @@ export default function Home() {
     }
   }, [entries]);
 
-  // 判斷是否為「髒」狀態 (有內容且未儲存)
   const isDirty = !hasSaved && content.trim().length > 0;
 
-  // 🧭 通用導航檢查器
   const checkNavigation = (action: () => void, type: 'unsaved' | 'delete' = 'unsaved') => {
-    // 只有在編輯模式且有未儲存內容時才攔截 (如果是刪除操作，則總是攔截)
     if ((view === 'editor' && isDirty) || type === 'delete') {
       setPendingAction(() => action);
       setWarningType(type);
@@ -115,11 +118,13 @@ export default function Home() {
     setIsSaving(true);
     const now = Date.now();
     
+    // 這裡我們同時紀錄 createdAt (若無) 和 updatedAt
     const newEntry: JournalEntry = {
       id: activeId || Math.random().toString(36).substr(2, 9),
-      date,
+      date, // 這是使用者選的「日記日期」
       content,
-      createdAt: now,
+      createdAt: activeId ? (entries.find(e => e.id === activeId)?.createdAt || now) : now,
+      updatedAt: now, // ✨ 這是系統紀錄的「最後更新時間」
       hasCoachInteraction: activeMessages.length > 0,
       messages: activeMessages
     };
@@ -147,7 +152,7 @@ export default function Home() {
       
       if (activeId) {
         setEntries(prevEntries => prevEntries.map(e => e.id === activeId ? 
-          { ...e, messages: updatedMsgs, hasCoachInteraction: true } : e
+          { ...e, messages: updatedMsgs, hasCoachInteraction: true, updatedAt: Date.now() } : e // 對話也算更新
         ));
       }
       return updatedMsgs;
@@ -162,7 +167,7 @@ export default function Home() {
       
       if (activeId) {
         setEntries(prevEntries => prevEntries.map(e => e.id === activeId ? 
-          { ...e, messages: updatedMsgs } : e
+          { ...e, messages: updatedMsgs, updatedAt: Date.now() } : e
         ));
       }
       return updatedMsgs;
@@ -170,7 +175,6 @@ export default function Home() {
   };
 
   const handleSelectEntry = (entry: JournalEntry) => {
-    // 從列表點擊進入日記，不需要警告，因為列表模式下沒有「未儲存」的狀態
     setActiveId(entry.id);
     setContent(entry.content);
     setDate(entry.date);
@@ -188,7 +192,16 @@ export default function Home() {
     setView('editor');
   };
 
-  const allBookmarks = entries.flatMap(entry => 
+  // 🔍 排序邏輯：依照「日記日期 (date)」降冪排序 (最新的日子在上面)
+  // 如果日期一樣，則比較最後更新時間
+  const sortedEntries = [...entries].sort((a, b) => {
+    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    return (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt);
+  });
+
+  // 🔍 典藏排序：同樣依照原始日記日期排序
+  const allBookmarks = sortedEntries.flatMap(entry => 
     (entry.messages || [])
       .filter(m => m.isBookmarked)
       .map(m => ({ ...m, originDate: entry.date, originId: entry.id }))
@@ -198,7 +211,6 @@ export default function Home() {
     <Layout 
       activeView={view} 
       onNavigate={(v) => {
-        // 🛡️ 攔截側邊欄導航
         checkNavigation(() => {
           if (v === 'editor' && view !== 'editor') startNewEntry();
           else setView(v);
@@ -236,7 +248,6 @@ export default function Home() {
             </div>
           </div>
           
-          {/* 調整按鈕區塊：讓「結束」按鈕總是可見，但加上防呆 */}
           <div className="flex justify-end gap-3 mb-6 animate-in slide-in-from-top-2 fade-in duration-500">
             <button 
               onClick={() => checkNavigation(() => setView('list'), 'unsaved')} 
@@ -279,22 +290,31 @@ export default function Home() {
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">日記列表</h1>
-             <p className="text-stone-400 text-sm mt-1">總計 {entries.length} 篇</p>
+             <p className="text-stone-400 text-sm mt-1">依照日期排序</p>
           </div>
           <div className="space-y-4">
-            {entries.length === 0 ? (
+            {sortedEntries.length === 0 ? (
                <div className="text-stone-300 text-center py-20 font-serif-tc">還沒有任何紀錄。開始寫下你的第一篇日記吧...</div>
             ) : (
-              entries.map(entry => (
+              // ✨ 這裡改成使用 sortedEntries 進行渲染
+              sortedEntries.map(entry => (
                 <div key={entry.id} onClick={() => handleSelectEntry(entry)} className="group bg-white p-6 rounded-xl shadow-sm border border-stone-100 hover:shadow-md transition-all cursor-pointer flex gap-6 items-start">
                   <div className="flex flex-col items-center min-w-[60px]">
                     <div className="w-8 h-8 rounded-full border border-stone-300 flex items-center justify-center text-stone-500 text-xs font-serif-tc mb-2 group-hover:bg-stone-900 group-hover:text-white transition-colors">{entry.date.split('-')[2]}</div>
                     <span className="text-[10px] text-stone-400">{entry.date.split('-')[0]}-{entry.date.split('-')[1]}</span>
                   </div>
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-serif-tc font-bold text-lg text-stone-800 line-clamp-1">{entry.date}</h3>
-                      {entry.hasCoachInteraction && <span className="px-2 py-0.5 bg-[#f0fdf4] text-[#15803d] text-[10px] rounded-full border border-[#bbf7d0]">已開啟對話</span>}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-serif-tc font-bold text-lg text-stone-800 line-clamp-1">{entry.date}</h3>
+                        {entry.hasCoachInteraction && <span className="px-2 py-0.5 bg-[#f0fdf4] text-[#15803d] text-[10px] rounded-full border border-[#bbf7d0]">已開啟對話</span>}
+                      </div>
+                      
+                      {/* ✨ 顯示淡淡的更新時間 (若無 updatedAt 則顯示 createdAt) */}
+                      <div className="flex items-center gap-1 text-[10px] text-stone-300">
+                        <Clock className="w-3 h-3" />
+                        <span>編輯於 {formatUpdateTime(entry.updatedAt || entry.createdAt)}</span>
+                      </div>
                     </div>
                     <p className="text-stone-500 font-serif-tc line-clamp-2 leading-relaxed text-sm">{entry.content}</p>
                   </div>
@@ -340,7 +360,6 @@ export default function Home() {
         />
       )}
 
-      {/* ⚠️ 警告視窗元件插入點 */}
       <WarningModal 
         isOpen={showWarning}
         type={warningType}

@@ -11,6 +11,7 @@ export interface JournalEntry {
   date: string;
   content: string;
   createdAt: number;
+  updatedAt?: number; // ✨ 新增：更新時間戳記 (設為可選，以相容舊資料)
   hasCoachInteraction: boolean;
   messages: Message[];
 }
