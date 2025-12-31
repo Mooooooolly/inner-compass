@@ -18,24 +18,30 @@ export function Layout({ activeView, onNavigate, onFeedbackClick, children }: La
   ];
 
   return (
-    <div className="flex h-screen bg-[#fcfaf8] text-stone-900 font-serif-tc overflow-hidden selection:bg-[#2f4f2f] selection:text-white">
-      {/* 側邊欄：固定寬度 w-20 */}
-      <aside className="w-20 bg-white border-r border-stone-200 flex flex-col items-center py-8 z-20 shrink-0">
+    // ✨ 修改 1: 手機版垂直排列 (flex-col)，電腦版水平排列 (md:flex-row)
+    <div className="flex h-screen bg-[#fcfaf8] text-stone-900 font-serif-tc overflow-hidden selection:bg-[#2f4f2f] selection:text-white flex-col md:flex-row">
+      
+      {/* ✨ 修改 2: 側邊欄 RWD 設定
+          手機版: fixed bottom-0 (置底), w-full (全寬), h-16 (高度), border-t (上邊框), flex-row (橫向)
+          電腦版: relative, w-20, h-full, border-r (右邊框), flex-col (直向)
+      */}
+      <aside className="
+        fixed bottom-0 left-0 right-0 z-40 w-full h-16 bg-white border-t border-stone-200 flex flex-row items-center justify-around px-2
+        md:relative md:w-20 md:h-full md:border-r md:border-t-0 md:flex-col md:justify-start md:py-8 md:px-0
+      ">
         
-        {/* ✨ Logo 區塊：恢復「書本圖示 + 垂直文字」組合 */}
-        <div className="mb-12 flex flex-col items-center gap-4">
-          {/* 書本圖示容器 */}
+        {/* Logo 區塊: 手機版隱藏 (hidden), 電腦版顯示 (md:flex) */}
+        <div className="hidden md:flex mb-12 flex-col items-center gap-4">
           <div className="w-10 h-10 bg-[#1c1917] rounded-xl flex items-center justify-center text-white shadow-md">
             <BookOpen className="w-6 h-6" strokeWidth={2} />
           </div>
-          {/* 垂直質感文字 */}
           <span className="[writing-mode:vertical-lr] text-[10px] tracking-[0.3em] text-stone-400 font-serif rotate-180 select-none cursor-default">
             INNER COMPASS
           </span>
         </div>
 
-        {/* 導航選單：純 Icon */}
-        <nav className="flex-1 w-full flex flex-col items-center gap-6">
+        {/* 導航選單: 手機版橫向 (flex-row), 電腦版直向 (md:flex-col) */}
+        <nav className="flex flex-1 flex-row items-center justify-around w-full max-w-sm md:max-w-none md:flex-col md:gap-6 md:justify-start">
           {navItems.map((item) => {
             const isActive = activeView === item.view;
             return (
@@ -54,29 +60,28 @@ export function Layout({ activeView, onNavigate, onFeedbackClick, children }: La
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 
-                {/* 活躍狀態的小圓點指示 */}
                 {isActive && (
-                  <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-1 h-1 bg-[#1c1917] rounded-full" />
+                  // 手機版: 指示點在下方 (-bottom-1), 電腦版: 指示點在右方 (-right-2)
+                  <div className="absolute -bottom-1 md:top-1/2 md:-bottom-auto md:-translate-y-1/2 md:-right-2 w-1 h-1 bg-[#1c1917] rounded-full" />
                 )}
               </button>
             );
           })}
-        </nav>
 
-        {/* 底部回饋按鈕：純 Icon */}
-        <div className="mt-auto pb-4">
+          {/* ✨ 修改 3: 回饋按鈕在手機版也加入導航列中，電腦版則維持在底部 */}
           <button
             onClick={onFeedbackClick}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-300 hover:text-[#1c1917] hover:bg-stone-50 transition-all duration-300"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-300 hover:text-[#1c1917] hover:bg-stone-50 transition-all duration-300 md:mt-auto"
             title="意見回饋"
           >
             <MessageSquare className="w-6 h-6" strokeWidth={2} />
           </button>
-        </div>
+        </nav>
+
       </aside>
 
-      {/* 主內容區域 */}
-      <main className="flex-1 overflow-y-auto relative scroll-smooth">
+      {/* 主內容區域: 手機版下方預留空間 (pb-20) 避免被導航列擋住 */}
+      <main className="flex-1 overflow-y-auto relative scroll-smooth pb-20 md:pb-0">
         <div className="min-h-full p-4 md:p-12 pb-24 max-w-5xl mx-auto">
           {children}
         </div>

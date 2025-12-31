@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Trash2, Calendar, Check, X, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
-import { ViewState, JournalEntry, Message } from '../types';
+import { ViewState, JournalEntry, Message } from '@/types';
 
 // ✨ 通用警告視窗元件
 const WarningModal = ({ 
@@ -59,7 +59,7 @@ const WarningModal = ({
   );
 };
 
-// 📧 回饋表單視窗 (使用 Web3Forms)
+// 📧 回饋表單視窗
 const FeedbackModal = ({ 
   isOpen, 
   onClose 
@@ -81,8 +81,7 @@ const FeedbackModal = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // 👇 記得確認這裡是否已填入您的 Key
-          access_key: 'c20d535e-a4b3-4007-b0da-4474e904cba7', 
+          access_key: 'YOUR_ACCESS_KEY_HERE', 
           subject: 'Inner Compass 使用者回饋',
           message: message,
           email: 'anonymous@inner-compass.app'
@@ -117,10 +116,10 @@ const FeedbackModal = ({
           <MessageSquare className="w-5 h-5 text-[#2f4f2f]" /> 意見回饋
         </h3>
         <p className="text-stone-500 font-serif-tc text-sm mb-4">
-          歡迎任何想法，一起讓這裡變得更好
+          歡迎回饋，一起讓這裡變得更好。
           <br />
-          也可以留下聯絡方式，或許我們能有更多討論
-          </p>
+          也可以留下聯絡方式，或許我們能有更多討論。
+        </p>
         
         {status === 'success' ? (
           <div className="bg-green-50 text-green-700 p-4 rounded-lg flex items-center justify-center gap-2 font-serif-tc min-h-[120px]">
@@ -304,7 +303,6 @@ export default function Home() {
           else setView(v);
         }, 'unsaved');
       }}
-      // ✨ 關鍵修改：將控制回饋視窗的函式傳遞給 Layout
       onFeedbackClick={() => setShowFeedback(true)}
     >
       {view === 'editor' && (
@@ -339,8 +337,6 @@ export default function Home() {
                 {isSaving ? '儲存中' : (hasSaved ? '已儲存' : '儲存')}
               </button>
 
-              {/* ⚠️ 已移除：原本這裡的回饋按鈕，現在移到側邊欄了 */}
-
               <button 
                 onClick={() => checkNavigation(() => setView('list'), 'unsaved')} 
                 className="p-2.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
@@ -351,7 +347,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="flex-1 relative min-h-[60vh]">
+          <div className="relative w-full h-[75vh] min-h-[500px]">
             <textarea 
               value={content} 
               onChange={(e) => { 
@@ -363,7 +359,8 @@ export default function Home() {
             />
             
             {hasSaved && (
-              <div className="absolute bottom-4 right-4 z-20 animate-in zoom-in-50 duration-300">
+              // ✨ 關鍵修改: 手機版 bottom-20 (避免被底欄擋住), 電腦版 bottom-12
+              <div className="fixed bottom-20 right-6 md:bottom-12 md:right-12 z-50 animate-in zoom-in-50 duration-300">
                  <button 
                    onClick={handleOpenCoach}
                    className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-[#2f4f2f] text-white shadow-xl hover:scale-110 transition-all duration-300"
@@ -384,6 +381,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">日記列表</h1>
+             <p className="text-stone-400 text-sm mt-1">依照日期排序</p>
           </div>
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
