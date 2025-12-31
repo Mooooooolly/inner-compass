@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Book, MessageSquare, Loader2, PenLine } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '@/types';
@@ -86,12 +86,11 @@ const PrivacyNoticeModal = ({
             <ShieldAlert className="w-6 h-6" />
           </div>
           <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2">
-            關於您的隱私
+            關於您的資料隱私
           </h3>
           <div className="text-stone-500 font-serif-tc text-sm leading-relaxed mb-6 text-left bg-stone-50 p-4 rounded-lg border border-stone-100">
             <p className="mb-2">
-              Inner Compass 採用<strong>本地儲存</strong>技術。
-              <br />您的所有日記與對話都只儲存在<strong>這台裝置的瀏覽器中</strong>，我們無法讀取。
+              Inner Compass 採用<strong>「本地儲存」</strong>技術。您的所有日記與對話紀錄都只儲存在<strong>這台裝置的瀏覽器中</strong>，我們無法讀取。
             </p>
             <p className="text-red-500 font-medium text-xs">
               ⚠️ 若您使用公用電腦（如圖書館），請務必使用「無痕模式」，關閉視窗後資料才會自動清除，以免隱私外洩。
@@ -117,7 +116,7 @@ const PrivacyNoticeModal = ({
   );
 };
 
-// 📧 回饋表單視窗 (修復 Key 的讀取方式)
+// 📧 回饋表單視窗
 const FeedbackModal = ({ 
   isOpen, 
   onClose 
@@ -135,12 +134,10 @@ const FeedbackModal = ({
     setStatus('sending');
 
     try {
-      // 🚀 使用環境變數 (Vercel 上設定的那個)
       const res = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // ✨ 關鍵修改：讀取 NEXT_PUBLIC_WEB3FORMS_KEY
           access_key: process.env.NEXT_PUBLIC_WEB3FORMS_KEY, 
           subject: 'Inner Compass 使用者回饋',
           message: message,
@@ -209,10 +206,14 @@ const FeedbackModal = ({
   );
 };
 
-// 🛠️ 輔助函式
+// 🛠️ 輔助函式：調整為 mm-dd hh:mm 格式
 const formatUpdateTime = (timestamp: number) => {
   const d = new Date(timestamp);
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  const hours = d.getHours().toString().padStart(2, '0');
+  const minutes = d.getMinutes().toString().padStart(2, '0');
+  return `${month}-${day} ${hours}:${minutes}`;
 };
 
 export default function Home() {
@@ -233,7 +234,7 @@ export default function Home() {
   const [pendingAction, setPendingAction] = useState<() => void>(() => {});
 
   const [showFeedback, setShowFeedback] = useState(false);
-  const [showPrivacyNotice, setShowPrivacyNotice] = useState(false); // ✨ 補回這一行！
+  const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -450,7 +451,6 @@ export default function Home() {
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">日記列表</h1>
-             <p className="text-stone-400 text-sm mt-1">依照日期排序</p>
           </div>
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
@@ -460,25 +460,47 @@ export default function Home() {
                </div>
             ) : (
               sortedEntries.map(entry => (
-                <div key={entry.id} onClick={() => handleSelectEntry(entry)} className="group bg-white p-6 rounded-xl shadow-sm border border-stone-100 hover:shadow-md transition-all cursor-pointer flex gap-6 items-start">
-                  <div className="flex flex-col items-center min-w-[60px]">
-                    <div className="w-8 h-8 rounded-full border border-stone-300 flex items-center justify-center text-stone-500 text-xs font-serif-tc mb-2 group-hover:bg-stone-900 group-hover:text-white transition-colors">{entry.date.split('-')[2]}</div>
-                    <span className="text-[10px] text-stone-400">{entry.date.split('-')[0]}-{entry.date.split('-')[1]}</span>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-serif-tc font-bold text-lg text-stone-800 line-clamp-1">{entry.date}</h3>
-                        {entry.hasCoachInteraction && <span className="px-2 py-0.5 bg-[#f0fdf4] text-[#15803d] text-[10px] rounded-full border border-[#bbf7d0]">已開啟對話</span>}
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] text-stone-300">
-                        <Clock className="w-3 h-3" />
-                        <span>編輯於 {formatUpdateTime(entry.updatedAt || entry.createdAt)}</span>
-                      </div>
+                <div key={entry.id} onClick={() => handleSelectEntry(entry)} className="group bg-white p-6 rounded-xl shadow-sm border border-stone-100 hover:shadow-md transition-all cursor-pointer flex gap-4 items-start">
+                  {/* 左側：日期圓圈 */}
+                  <div className="flex flex-col items-center min-w-[60px] shrink-0">
+                    <div className="w-12 h-12 rounded-full border border-stone-300 flex items-center justify-center text-stone-600 text-lg font-bold font-serif-tc mb-1 group-hover:bg-stone-900 group-hover:text-white transition-colors">
+                      {entry.date.split('-')[2]}
                     </div>
-                    <p className="text-stone-500 font-serif-tc line-clamp-2 leading-relaxed text-sm">{entry.content}</p>
+                    <span className="text-[10px] text-stone-400 tracking-wider">
+                      {entry.date.split('-')[0]}.{entry.date.split('-')[1]}
+                    </span>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-stone-300 group-hover:text-stone-600" />
+
+                  {/* 右側：內容與資訊 */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    
+                    {/* 上方：日記內容摘要 */}
+                    <div className="flex items-center justify-between">
+                       {/* ✨ 這裡做了條件判斷：如果有內容就粗體，沒內容就淡灰色斜體 */}
+                       <h3 className={`font-serif-tc text-base truncate pr-2 ${entry.content ? 'font-bold text-stone-800' : 'font-normal text-stone-400 italic'}`}>
+                         {entry.content || "(尚無內容，等待你留下思緒...)"}
+                       </h3>
+                       <ChevronRight className="w-4 h-4 text-stone-300 group-hover:text-stone-600 shrink-0" />
+                    </div>
+
+                    {/* 下方：資訊列 (時間 + AI 標籤) */}
+                    <div className="flex items-center gap-3 text-xs text-stone-400 font-serif-tc">
+                       {/* AI 標籤 */}
+                       {entry.hasCoachInteraction && (
+                         <span className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 rounded-full border border-green-100 shrink-0 whitespace-nowrap">
+                           <Sparkles className="w-3 h-3 mr-1 fill-green-700" />
+                           已對話
+                         </span>
+                       )}
+                       
+                       {/* 編輯時間：使用 PenLine icon 並顯示完整格式 */}
+                       <div className="flex items-center gap-1 shrink-0">
+                         <PenLine className="w-3 h-3" />
+                         <span>{formatUpdateTime(entry.updatedAt || entry.createdAt)}</span> 
+                       </div>
+                    </div>
+
+                  </div>
                 </div>
               ))
             )}
@@ -535,7 +557,6 @@ export default function Home() {
         onClose={() => setShowFeedback(false)}
       />
 
-      {/* ✨ 補上這一段：隱私權視窗才會真的顯示出來 */}
       <PrivacyNoticeModal 
         isOpen={showPrivacyNotice}
         onClose={() => setShowPrivacyNotice(false)}
