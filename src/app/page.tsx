@@ -59,7 +59,7 @@ const WarningModal = ({
   );
 };
 
-// 📧 回饋表單視窗
+// 📧 回饋表單視窗 (修復 Key 的讀取方式)
 const FeedbackModal = ({ 
   isOpen, 
   onClose 
@@ -77,11 +77,13 @@ const FeedbackModal = ({
     setStatus('sending');
 
     try {
+      // 🚀 使用環境變數 (Vercel 上設定的那個)
       const res = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          access_key: 'YOUR_ACCESS_KEY_HERE', 
+          // ✨ 關鍵修改：讀取 NEXT_PUBLIC_WEB3FORMS_KEY
+          access_key: process.env.NEXT_PUBLIC_WEB3FORMS_KEY, 
           subject: 'Inner Compass 使用者回饋',
           message: message,
           email: 'anonymous@inner-compass.app'
