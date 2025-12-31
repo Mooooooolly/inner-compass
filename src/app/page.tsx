@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Save, Trash2, Calendar, Check, X, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
+import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Clock, Book, MessageSquare, Loader2 } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '@/types';
@@ -54,6 +54,64 @@ const WarningModal = ({
             {isDelete ? '確認刪除' : '確定離開'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// 🔒 隱私權提醒視窗 (只顯示一次)
+const PrivacyNoticeModal = ({ 
+  isOpen, 
+  onClose 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) => {
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    if (dontShowAgain) {
+      localStorage.setItem('inner_compass_privacy_acknowledged', 'true');
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200 border border-stone-100">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-4 text-stone-700">
+            <ShieldAlert className="w-6 h-6" />
+          </div>
+          <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2">
+            關於您的隱私
+          </h3>
+          <div className="text-stone-500 font-serif-tc text-sm leading-relaxed mb-6 text-left bg-stone-50 p-4 rounded-lg border border-stone-100">
+            <p className="mb-2">
+              Inner Compass 採用<strong>本地儲存</strong>技術。
+              <br />您的所有日記與對話都只儲存在<strong>這台裝置的瀏覽器中</strong>，我們無法讀取。
+            </p>
+            <p className="text-red-500 font-medium text-xs">
+              ⚠️ 若您使用公用電腦（如圖書館），請務必使用「無痕模式」，關閉視窗後資料才會自動清除，以免隱私外洩。
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 mb-6 cursor-pointer" onClick={() => setDontShowAgain(!dontShowAgain)}>
+          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${dontShowAgain ? 'bg-stone-900 border-stone-900 text-white' : 'border-stone-300 bg-white'}`}>
+             {dontShowAgain && <Check className="w-3 h-3" />}
+          </div>
+          <span className="text-sm text-stone-600 font-serif-tc select-none">我已了解，不再顯示此提示</span>
+        </div>
+
+        <button 
+          onClick={handleConfirm}
+          className="w-full px-4 py-3 rounded-lg bg-stone-900 text-white font-serif-tc shadow-md hover:bg-stone-800 transition-all active:scale-95"
+        >
+          開始使用
+        </button>
       </div>
     </div>
   );
@@ -175,6 +233,16 @@ export default function Home() {
   const [pendingAction, setPendingAction] = useState<() => void>(() => {});
 
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showPrivacyNotice, setShowPrivacyNotice] = useState(false); // ✨ 補回這一行！
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasAcknowledged = localStorage.getItem('inner_compass_privacy_acknowledged');
+      if (!hasAcknowledged) {
+        setTimeout(() => setShowPrivacyNotice(true), 1000);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -361,7 +429,6 @@ export default function Home() {
             />
             
             {hasSaved && (
-              // ✨ 關鍵修改: 手機版 bottom-20 (避免被底欄擋住), 電腦版 bottom-12
               <div className="fixed bottom-20 right-6 md:bottom-12 md:right-12 z-50 animate-in zoom-in-50 duration-300">
                  <button 
                    onClick={handleOpenCoach}
@@ -466,6 +533,12 @@ export default function Home() {
       <FeedbackModal 
         isOpen={showFeedback}
         onClose={() => setShowFeedback(false)}
+      />
+
+      {/* ✨ 補上這一段：隱私權視窗才會真的顯示出來 */}
+      <PrivacyNoticeModal 
+        isOpen={showPrivacyNotice}
+        onClose={() => setShowPrivacyNotice(false)}
       />
     </Layout>
   );
