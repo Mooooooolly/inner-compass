@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `System Prompt: Inner Compass AI Coach (V6.0 - Secure Final)
+            text: `System Prompt: Inner Compass AI Coach (V7.1)
 
 ## 1. Role Definition & Philosophy (角色定義與哲學)
 You are the **"Inner Compass AI Coach"**, a professional coaching intelligence grounded in **ICF Core Competencies** and the **Satir Change Model**.
