@@ -5,6 +5,7 @@ import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, 
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message } from '@/types';
+import InAppBrowserBanner from './components/InAppBrowserBanner';
 
 // ✨ 通用警告視窗元件
 const WarningModal = ({ 
@@ -376,6 +377,7 @@ export default function Home() {
       }}
       onFeedbackClick={() => setShowFeedback(true)}
     >
+      <InAppBrowserBanner />
       {view === 'editor' && (
         <div className="flex flex-col h-full max-w-3xl mx-auto animate-in fade-in duration-700">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-stone-200 gap-4 mt-4 md:mt-0">
