@@ -15,3 +15,9 @@ export interface JournalEntry {
   hasCoachInteraction: boolean;
   messages: Message[];
 }
+
+// ✨ 用於資源控管與對話次數追蹤的資料結構
+export interface UsageData {
+  lastUpdateDate: string;     // 儲存格式如 "2023-10-27"
+  totalDailyCount: number;    // 當日總計對話次數 (上限 20)
+}

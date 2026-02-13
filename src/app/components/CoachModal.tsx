@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Sparkles, Bookmark } from 'lucide-react';
-import { Message } from '../../types';
+import { Message, UsageData } from '../../types';
+import { getUsageData, incrementUsageCount } from '@/lib/usage';
 
 interface CoachModalProps {
   onClose: () => void;
@@ -11,6 +12,18 @@ interface CoachModalProps {
   onToggleBookmark: (index: number) => void;
   journalContent: string;
 }
+
+// ✨ 用量圓點元件
+const UsageDots = ({ count }: { count: number }) => {
+  const litDots = Math.floor(count / 4);
+  const dots = Array.from({ length: 5 }, (_, i) => (
+    <div 
+      key={i} 
+      className={`w-1.5 h-1.5 rounded-full transition-colors ${i < litDots ? 'bg-[#2f4f2f]' : 'bg-stone-300'}`}
+    />
+  ));
+  return <div className="flex items-center gap-1.5 ml-2">{dots}</div>;
+};
 
 export const CoachModal: React.FC<CoachModalProps> = ({ 
   onClose, 
@@ -21,8 +34,16 @@ export const CoachModal: React.FC<CoachModalProps> = ({
 }) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [usage, setUsage] = useState<UsageData>({ lastUpdateDate: '', totalDailyCount: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
+  
+  const isUsageLimited = usage.totalDailyCount >= 20;
+
+  // 載入時讀取用量
+  useEffect(() => {
+    setUsage(getUsageData());
+  }, []);
 
   // 自動捲動
   useEffect(() => {
@@ -33,8 +54,9 @@ export const CoachModal: React.FC<CoachModalProps> = ({
 
   // 🧠 AI 核心邏輯
   useEffect(() => {
-    // 定義一個共用的 API 呼叫函式
     const callAI = async (userMessage: string) => {
+      if (isProcessingRef.current || usage.totalDailyCount >= 20) return;
+      
       isProcessingRef.current = true;
       setIsTyping(true);
 
@@ -51,10 +73,14 @@ export const CoachModal: React.FC<CoachModalProps> = ({
         const data = await response.json();
 
         if (!response.ok) {
+          // API 失敗時不增加計數
           throw new Error(data.reply || `API 請求失敗 (${response.status})`);
         }
         
         onAddMessage({ role: 'assistant', content: data.reply });
+        // ✨ 成功時才增加計數
+        const newUsage = incrementUsageCount();
+        setUsage(newUsage);
       
       } catch (error: any) {
         console.error(error);
@@ -68,23 +94,20 @@ export const CoachModal: React.FC<CoachModalProps> = ({
       }
     };
 
-    // 1. ✨ 自動開場：如果是空白對話，發送一個「隱藏指令」讓 AI 開場
     if (messages.length === 0 && !isProcessingRef.current) {
-      // 這裡傳送的文字是給 AI 看的提示，不會顯示在對話框中（因為這是 assistant 的第一句話）
       const systemPrompt = "（請閱讀我的日記，並給我一個簡短、溫暖的開場提問，引導我探索這份感受。可以適時同理我的感受，或引用部分日記內容，若日記是一片空白，還是可以從「空白」提問，但不要說你好，也不會使用「您」。）";
       callAI(systemPrompt);
     }
 
-    // 2. 💬 使用者回覆後：正常的對話流程
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'user' && !isTyping && !isProcessingRef.current) {
       callAI(lastMsg.content);
     }
 
-  }, [messages, isTyping, onAddMessage, journalContent]);
+  }, [messages, onAddMessage, journalContent, usage.totalDailyCount]); // 依賴 usage.totalDailyCount
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isUsageLimited) return;
     onAddMessage({ role: 'user', content: input });
     setInput('');
   };
@@ -106,8 +129,11 @@ export const CoachModal: React.FC<CoachModalProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif-tc font-bold text-stone-900">內在智慧羅盤</h3>
-              <p className="text-xs text-stone-500">深度探索與引導</p>
+              <h3 className="font-serif-tc font-bold text-stone-900 flex items-center">
+                內在智慧羅盤
+                <UsageDots count={usage.totalDailyCount} />
+              </h3>
+              <p className="text-xs text-stone-500">每日對話限制 {usage.totalDailyCount}/20</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
@@ -116,11 +142,11 @@ export const CoachModal: React.FC<CoachModalProps> = ({
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#fdfcf8]">
-          {messages.map((msg, idx) => (
+           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start group'}`}>
               <div className={`relative max-w-[85%] p-4 rounded-2xl text-base leading-relaxed font-serif-tc shadow-sm whitespace-pre-wrap ${
                 msg.role === 'user' 
-                  ? 'bg-stone-800 text-white rounded-br-none' 
+                  ? 'bg-stone-800 text-white rounded-br-none'
                   : 'bg-white border border-stone-200 text-stone-800 rounded-bl-none pr-10'
               }`}>
                 {msg.content}
@@ -148,22 +174,31 @@ export const CoachModal: React.FC<CoachModalProps> = ({
           )}
         </div>
 
-        <div className="p-4 bg-white border-t border-stone-100 flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="在這裡回應你的內在聲音..."
-            className="flex-1 bg-stone-50 border-none rounded-lg px-4 py-3 text-stone-800 focus:ring-1 focus:ring-stone-200 outline-none font-serif-tc placeholder:text-stone-300"
-          />
-          <button 
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className="p-3 text-stone-400 hover:text-[#2f4f2f] transition-colors disabled:opacity-30"
-          >
-            <Send className="w-5 h-5" />
-          </button>
+        <div className="p-4 bg-white border-t border-stone-100">
+          {isUsageLimited ? (
+            <div className="text-center text-sm text-stone-500 font-serif-tc px-4 py-3 bg-stone-50 rounded-lg">
+              這份對話承載了許多你真實的覺察。現在，讓我們把這些思緒溫柔地安放，給內在一個安靜消化的空間。期待明天再見。
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="在這裡回應你的內在聲音..."
+                className="flex-1 bg-stone-50 border-none rounded-lg px-4 py-3 text-stone-800 focus:ring-1 focus:ring-stone-200 outline-none font-serif-tc placeholder:text-stone-300"
+                disabled={isTyping}
+              />
+              <button 
+                onClick={handleSend}
+                disabled={!input.trim() || isTyping}
+                className="p-3 text-stone-400 hover:text-[#2f4f2f] transition-colors disabled:opacity-30"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
