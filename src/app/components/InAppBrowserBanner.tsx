@@ -23,7 +23,7 @@ const InAppBrowserBanner = () => {
   return (
     <div className="bg-amber-100 border-b border-amber-200 text-amber-800 text-sm p-4 text-center relative">
       <p>
-        為了獲得完整的日記體驗與自動儲存功能，請點擊右上方 ... 並選擇「在瀏覽器中開啟」
+        為了獲得完整的體驗，請點擊右上方「...」並選擇「在瀏覽器中開啟」
       </p>
       <button
         onClick={() => setShowBanner(false)}

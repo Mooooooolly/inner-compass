@@ -14,7 +14,7 @@ export function Layout({ activeView, onNavigate, onFeedbackClick, children }: La
   const navItems = [
     { id: 'editor', icon: PenLine, label: '書寫', view: 'editor' as ViewState },
     { id: 'list', icon: Book, label: '日記', view: 'list' as ViewState },
-    { id: 'collections', icon: Bookmark, label: '典藏', view: 'collections' as ViewState },
+    { id: 'collections', icon: Bookmark, label: '收藏', view: 'collections' as ViewState },
   ];
 
   return (
@@ -72,7 +72,7 @@ export function Layout({ activeView, onNavigate, onFeedbackClick, children }: La
           <button
             onClick={onFeedbackClick}
             className="w-10 h-10 flex items-center justify-center rounded-xl text-stone-300 hover:text-[#1c1917] hover:bg-stone-50 transition-all duration-300 md:mt-auto"
-            title="意見回饋"
+            title="交流"
           >
             <MessageSquare className="w-6 h-6" strokeWidth={2} />
           </button>

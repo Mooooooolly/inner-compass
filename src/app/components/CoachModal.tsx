@@ -17,27 +17,27 @@ interface CoachModalProps {
 const UsageDots = ({ count }: { count: number }) => {
   const litDots = Math.floor(count / 4);
   const dots = Array.from({ length: 5 }, (_, i) => (
-    <div 
-      key={i} 
-      className={`w-1.5 h-1.5 rounded-full transition-colors ${i < litDots ? 'bg-[#2f4f2f]' : 'bg-stone-300'}`}
+    <div
+      key={i}
+      className={`w-1.5 h-1.5 rounded-full transition-colors ${i < litDots ? 'bg-[#2f4f2f]' : 'bg-stone-200'}`}
     />
   ));
-  return <div className="flex items-center gap-1.5 ml-2">{dots}</div>;
+  return <div className="flex items-center gap-1.5">{dots}</div>;
 };
 
-export const CoachModal: React.FC<CoachModalProps> = ({ 
-  onClose, 
-  messages, 
-  onAddMessage, 
+export const CoachModal: React.FC<CoachModalProps> = ({
+  onClose,
+  messages,
+  onAddMessage,
   onToggleBookmark,
-  journalContent 
+  journalContent
 }) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [usage, setUsage] = useState<UsageData>({ lastUpdateDate: '', totalDailyCount: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
-  
+
   const isUsageLimited = usage.totalDailyCount >= 20;
 
   // 載入時讀取用量
@@ -56,7 +56,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   useEffect(() => {
     const callAI = async (userMessage: string) => {
       if (isProcessingRef.current || usage.totalDailyCount >= 20) return;
-      
+
       isProcessingRef.current = true;
       setIsTyping(true);
 
@@ -73,20 +73,22 @@ export const CoachModal: React.FC<CoachModalProps> = ({
         const data = await response.json();
 
         if (!response.ok) {
-          // API 失敗時不增加計數
+          if (response.status === 429) {
+            setUsage(prev => ({ ...prev, totalDailyCount: 20 }));
+            return;
+          }
           throw new Error(data.reply || `API 請求失敗 (${response.status})`);
         }
-        
+
         onAddMessage({ role: 'assistant', content: data.reply });
-        // ✨ 成功時才增加計數
         const newUsage = incrementUsageCount();
         setUsage(newUsage);
-      
+
       } catch (error: any) {
         console.error(error);
-        onAddMessage({ 
-          role: 'assistant', 
-          content: `(系統訊息) ${error.message || "抱歉，連線發生未知錯誤。"}` 
+        onAddMessage({
+          role: 'assistant',
+          content: `(系統訊息) ${error.message || "抱歉，連線發生未知錯誤。"}`
         });
       } finally {
         setIsTyping(false);
@@ -104,7 +106,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
       callAI(lastMsg.content);
     }
 
-  }, [messages, onAddMessage, journalContent, usage.totalDailyCount]); // 依賴 usage.totalDailyCount
+  }, [messages, onAddMessage, journalContent, usage.totalDailyCount]);
 
   const handleSend = () => {
     if (!input.trim() || isUsageLimited) return;
@@ -129,11 +131,14 @@ export const CoachModal: React.FC<CoachModalProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif-tc font-bold text-stone-900 flex items-center">
+              <h3 className="font-serif-tc font-bold text-stone-900">
                 內在智慧羅盤
-                <UsageDots count={usage.totalDailyCount} />
               </h3>
-              <p className="text-xs text-stone-500">每日對話限制 {usage.totalDailyCount}/20</p>
+              <div className="flex items-center gap-2 text-xs text-stone-500">
+                <p>今日探索頻寬</p>
+                <UsageDots count={usage.totalDailyCount} />
+                <span>{usage.totalDailyCount}/20</span>
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
@@ -145,13 +150,13 @@ export const CoachModal: React.FC<CoachModalProps> = ({
            {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start group'}`}>
               <div className={`relative max-w-[85%] p-4 rounded-2xl text-base leading-relaxed font-serif-tc shadow-sm whitespace-pre-wrap ${
-                msg.role === 'user' 
+                msg.role === 'user'
                   ? 'bg-stone-800 text-white rounded-br-none'
                   : 'bg-white border border-stone-200 text-stone-800 rounded-bl-none pr-10'
               }`}>
                 {msg.content}
                 {msg.role === 'assistant' && (
-                  <button 
+                  <button
                     onClick={() => onToggleBookmark(idx)}
                     className={`absolute bottom-2 right-2 p-1.5 rounded-full transition-all opacity-0 group-hover:opacity-100 ${
                       msg.isBookmarked ? 'opacity-100 text-[#2f4f2f] bg-stone-100' : 'text-stone-300 hover:text-stone-500 hover:bg-stone-50'
@@ -176,8 +181,8 @@ export const CoachModal: React.FC<CoachModalProps> = ({
 
         <div className="p-4 bg-white border-t border-stone-100">
           {isUsageLimited ? (
-            <div className="text-center text-sm text-stone-500 font-serif-tc px-4 py-3 bg-stone-50 rounded-lg">
-              這份對話承載了許多你真實的覺察。現在，讓我們把這些思緒溫柔地安放，給內在一個安靜消化的空間。期待明天再見。
+            <div className="text-center text-sm text-stone-500 font-serif-tc px-4 py-3 bg-stone-50 rounded-lg shadow-sm">
+              今日的滋養已足夠。給思緒一點留白，讓覺察在土壤裡慢慢發酵。
             </div>
           ) : (
             <div className="flex gap-2">
@@ -186,11 +191,11 @@ export const CoachModal: React.FC<CoachModalProps> = ({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="在這裡回應你的內在聲音..."
+                placeholder="在這裡，與內在的聲音共振..."
                 className="flex-1 bg-stone-50 border-none rounded-lg px-4 py-3 text-stone-800 focus:ring-1 focus:ring-stone-200 outline-none font-serif-tc placeholder:text-stone-300"
                 disabled={isTyping}
               />
-              <button 
+              <button
                 onClick={handleSend}
                 disabled={!input.trim() || isTyping}
                 className="p-3 text-stone-400 hover:text-[#2f4f2f] transition-colors disabled:opacity-30"

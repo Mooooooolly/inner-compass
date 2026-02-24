@@ -87,11 +87,11 @@ const PrivacyNoticeModal = ({
             <ShieldAlert className="w-6 h-6" />
           </div>
           <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2">
-            關於您的資料隱私
+            這裡是您的專屬避風港
           </h3>
           <div className="text-stone-500 font-serif-tc text-sm leading-relaxed mb-6 text-left bg-stone-50 p-4 rounded-lg border border-stone-100">
             <p className="mb-2">
-              Inner Compass 採用<strong>「本地儲存」</strong>技術。您的所有日記與對話紀錄都只儲存在<strong>這台裝置的瀏覽器中</strong>，我們無法讀取。
+              Inner Compass 採用<strong>「本地儲存」</strong>。您的思緒與對話僅存放於此裝置的溫室中，外界無法窺探。
             </p>
             <p className="text-red-500 font-medium text-xs">
               ⚠️ 若您使用公用電腦（如圖書館），請務必使用「無痕模式」，關閉視窗後資料才會自動清除，以免隱私外洩。
@@ -171,10 +171,10 @@ const FeedbackModal = ({
         <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><X className="w-5 h-5 rotate-180" /></button>
         
         <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-[#2f4f2f]" /> 意見回饋
+          <MessageSquare className="w-5 h-5 text-[#2f4f2f]" /> 交流與分享
         </h3>
         <p className="text-stone-500 font-serif-tc text-sm mb-4">
-          歡迎回饋，一起讓這裡變得更好。
+          歡迎分享您的使用感受，與我們一起細心灌溉這個空間。
           <br />
           也可以留下聯絡方式，或許我們能有更多討論。
         </p>
@@ -382,8 +382,8 @@ export default function Home() {
         <div className="flex flex-col h-full max-w-3xl mx-auto animate-in fade-in duration-700">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-stone-200 gap-4 mt-4 md:mt-0">
             <div className="space-y-2">
-              <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">回顧思緒</h1>
-              <p className="text-stone-500 font-serif-tc italic text-sm">讓文字流淌，承接你的所有心情。</p>
+              <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">整理思緒</h1>
+              <p className="text-stone-500 font-serif-tc italic text-sm">在寧靜的空間裡，讓感受自然發芽。</p>
             </div>
             {/* ✨ 工具列區塊 */}
             <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
@@ -399,7 +399,7 @@ export default function Home() {
                     startNewEntry();
                   }, 'delete')}
                   className="p-2.5 text-stone-400 hover:text-red-500 hover:bg-stone-100 rounded-lg transition-colors"
-                  title="刪除日記"
+                  title="刪除"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -427,7 +427,7 @@ export default function Home() {
                 setContent(e.target.value); 
                 if (hasSaved) setHasSaved(false); 
               }} 
-              placeholder="寫下你的想法，讓內在智慧陪你探索..." 
+              placeholder="寫下你的想法，讓內在智慧陪你慢慢灌溉..." 
               className="w-full h-full bg-transparent resize-none outline-none text-xl leading-relaxed text-stone-700 placeholder:text-stone-300 font-serif-tc p-2 focus:bg-white/50 transition-colors rounded-xl" 
             />
             
@@ -442,7 +442,7 @@ export default function Home() {
                    <Sparkles className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform" />
                  </button>
                  <div className="absolute bottom-16 right-0 w-max bg-stone-800 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none mb-2 mr-[-10px]">
-                   與 AI 教練對話
+                   開啟深度對話
                  </div>
               </div>
             )}
@@ -452,13 +452,13 @@ export default function Home() {
       {view === 'list' && (
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
-             <h1 className="text-3xl font-serif-tc font-bold text-stone-900">日記列表</h1>
+             <h1 className="text-3xl font-serif-tc font-bold text-stone-900">紀錄軌跡</h1>
           </div>
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
                <div className="text-center py-20">
                  <Book className="w-12 h-12 text-stone-200 mx-auto mb-4" />
-                 <p className="text-stone-400 font-serif-tc">還沒有任何紀錄。開始寫下你的第一篇日記吧...</p>
+                 <p className="text-stone-400 font-serif-tc">這片土壤還很安靜。開始寫下你的第一篇日記吧...</p>
                </div>
             ) : (
               sortedEntries.map(entry => (
@@ -511,11 +511,11 @@ export default function Home() {
       )}
       {view === 'collections' && (
          <div className="max-w-3xl mx-auto animate-in fade-in">
-            <h1 className="text-3xl font-serif-tc font-bold text-stone-900 mb-8 border-b border-stone-200 pb-4 mt-4 md:mt-0">典藏</h1>
+            <h1 className="text-3xl font-serif-tc font-bold text-stone-900 mb-8 border-b border-stone-200 pb-4 mt-4 md:mt-0">收藏</h1>
             {allBookmarks.length === 0 ? (
               <div className="text-center py-20">
                 <Bookmark className="w-12 h-12 text-stone-200 mx-auto mb-4" />
-                <p className="text-stone-400 font-serif-tc">尚無典藏。當你遇到觸動內心的提問時，點擊書籤圖標將其收錄...</p>
+                <p className="text-stone-400 font-serif-tc">尚無收藏。當你遇到觸動內心的提問時，點擊書籤將其收藏...</p>
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2">
@@ -525,7 +525,7 @@ export default function Home() {
                     <p className="font-serif-tc text-stone-700 leading-relaxed mb-4 min-h-[80px]">{bookmark.content}</p>
                     <div className="flex items-center justify-between text-xs text-stone-400 pt-4 border-t border-stone-50">
                       <span>{bookmark.originDate}</span>
-                      <button onClick={() => { const entry = entries.find(e => e.id === bookmark.originId); if (entry) handleSelectEntry(entry); }} className="hover:text-stone-900 transition-colors">查看日記 →</button>
+                      <button onClick={() => { const entry = entries.find(e => e.id === bookmark.originId); if (entry) handleSelectEntry(entry); }} className="hover:text-stone-900 transition-colors">回溯這場對話 →</button>
                     </div>
                   </div>
                 ))}
