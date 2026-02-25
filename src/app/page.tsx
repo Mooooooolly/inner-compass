@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Book, MessageSquare, Loader2, PenLine } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
-import { ViewState, JournalEntry, Message } from '@/types';
+import { ViewState, JournalEntry, Message, DailySummary, UsageData } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
+import { getUsageData, incrementUsageCount } from '@/lib/usage';
 
 // ✨ 通用警告視窗元件
 const WarningModal = ({ 
@@ -168,7 +169,7 @@ const FeedbackModal = ({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 border border-stone-100 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><X className="w-5 h-5 rotate-180" /></button>
+        <button onClick={onClose} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><X className="w-5 h-5" /></button>
         
         <h3 className="text-xl font-serif-tc font-bold text-stone-900 mb-2 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-[#2f4f2f]" /> 交流與分享
@@ -220,45 +221,150 @@ const formatUpdateTime = (timestamp: number) => {
 export default function Home() {
   const [view, setView] = useState<ViewState>('editor');
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  
   const [activeId, setActiveId] = useState<string | null>(null);
   const [content, setContent] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
-  
   const [showCoach, setShowCoach] = useState(false);
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
-
   const [showWarning, setShowWarning] = useState(false);
   const [warningType, setWarningType] = useState<'unsaved' | 'delete'>('unsaved');
   const [pendingAction, setPendingAction] = useState<() => void>(() => {});
-
   const [showFeedback, setShowFeedback] = useState(false);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
 
+  // ✨ 新增狀態：管理 API 用量與每日摘要
+  const [usage, setUsage] = useState<UsageData>({ lastUpdateDate: '', totalDailyCount: 0, sessionCounts: {} });
+  const [summaries, setSummaries] = useState<DailySummary[]>([]);
+
+  // 🚀 每日足跡摘要生成函數
+  const generateYesterdaySummary = async (currentEntries: JournalEntry[], currentSummaries: DailySummary[]) => {
+    if (typeof window === 'undefined') return;
+
+    console.log("🚀 啟動每日足跡摘要檢查...");
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayDateString = yesterday.toISOString().split('T')[0];
+
+    const hasYesterdaySummary = currentSummaries.some(s => s.summary_date === yesterdayDateString);
+
+    if (hasYesterdaySummary) {
+        console.log("✅ 昨日摘要已存在，無需生成。");
+        return;
+    }
+
+    const yesterdayStart = new Date(yesterday);
+    yesterdayStart.setHours(0, 0, 0, 0);
+    const yesterdayEnd = new Date(yesterday);
+    yesterdayEnd.setHours(23, 59, 59, 999);
+
+    const yesterdayEntries = currentEntries.filter(entry => {
+        const entryTimestamp = entry.updatedAt || entry.createdAt;
+        return entryTimestamp >= yesterdayStart.getTime() && entryTimestamp <= yesterdayEnd.getTime();
+    });
+
+    if (yesterdayEntries.length === 0) {
+        console.log("✅ 昨日無日記變動，無需生成摘要。");
+        return;
+    }
+
+    console.log(`🔍 偵測到昨日有 ${yesterdayEntries.length} 篇日記變動，準備生成摘要...`);
+
+    const combinedContent = yesterdayEntries.map(e => `日期：${e.date}\n內容：\n${e.content}`).join('\n\n---\n\n');
+    const key_quotes = yesterdayEntries.flatMap(entry =>
+        (entry.messages || []).filter(m => m.isBookmarked).map(m => m.content)
+    );
+
+    try {
+        const response = await fetch('/api/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: combinedContent }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
+        }
+
+        const analysis = await response.json();
+        console.log("🤖 AI 摘要生成成功！", analysis);
+
+        const newSummary: DailySummary = {
+            summary_date: yesterdayDateString,
+            generated_at: new Date().toISOString(),
+            activity_stats: { // 簡化版統計，僅作示例
+                diaries_added: 0,
+                diaries_deleted: 0,
+                conversation_started: yesterdayEntries.some(e => e.hasCoachInteraction),
+                daily_limit_reached: usage.totalDailyCount >= 20,
+            },
+            impacted_diaries: [{
+                diary_date: yesterdayDateString,
+                sentiment_tags: analysis.sentiment_tags,
+                iceberg_depth: analysis.iceberg_depth,
+                topic_keywords: analysis.topic_keywords,
+                key_quotes: key_quotes,
+            }]
+        };
+
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+        const updatedSummaries = [...currentSummaries, newSummary].filter(s => new Date(s.generated_at) > ninetyDaysAgo);
+
+        localStorage.setItem('inner_compass_summaries', JSON.stringify(updatedSummaries));
+        setSummaries(updatedSummaries);
+        console.log("💾 新的每日摘要已儲存，並清除了 90 天前的舊摘要。");
+
+    } catch (error) {
+        console.error("❌ 生成每日摘要失敗:", error);
+    }
+  };
+
+
+  // 🔄 整合的啟動加載 Hook
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // 加載隱私設定
       const hasAcknowledged = localStorage.getItem('inner_compass_privacy_acknowledged');
       if (!hasAcknowledged) {
         setTimeout(() => setShowPrivacyNotice(true), 1000);
       }
-    }
-  }, []);
+      
+      // 加載日記、摘要、用量
+      const savedEntries = localStorage.getItem('inner_compass_entries');
+      const savedSummaries = localStorage.getItem('inner_compass_summaries');
+      let initialEntries: JournalEntry[] = [];
+      let initialSummaries: DailySummary[] = [];
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('inner_compass_entries');
-      if (saved) {
-        try {
-          setEntries(JSON.parse(saved));
-        } catch (e) {
-          console.error("讀取失敗", e);
-        }
+      if (savedEntries) {
+          try {
+              initialEntries = JSON.parse(savedEntries);
+              setEntries(initialEntries);
+          } catch (e) { console.error("讀取日記失敗", e); }
+      }
+
+      if (savedSummaries) {
+          try {
+              initialSummaries = JSON.parse(savedSummaries);
+              setSummaries(initialSummaries);
+          } catch (e) { console.error("讀取摘要失敗", e); }
+      }
+
+      setUsage(getUsageData());
+
+      // 觸發摘要生成（在讀取到日記後）
+      if (initialEntries.length > 0) {
+        generateYesterdaySummary(initialEntries, initialSummaries);
       }
     }
   }, []);
 
+
+  // 💾 儲存日記 Hook
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('inner_compass_entries', JSON.stringify(entries));
@@ -308,6 +414,7 @@ export default function Home() {
     setShowCoach(true);
   };
 
+  // 📈 更新對話與 API 用量
   const handleUpdateMessages = (newMsg: Message) => {
     setActiveMessages(prev => {
       const updatedMsgs = [...prev, newMsg];
@@ -317,6 +424,13 @@ export default function Home() {
           { ...e, messages: updatedMsgs, hasCoachInteraction: true, updatedAt: Date.now() } : e
         ));
       }
+
+      if (newMsg.role === 'assistant' && !newMsg.content.startsWith('(系統訊息)')) {
+        const newUsage = incrementUsageCount();
+        setUsage(newUsage);
+        console.log(`📈 使用頻寬 +1，今日總計: ${newUsage.totalDailyCount}`);
+      }
+
       return updatedMsgs;
     });
   };
@@ -385,7 +499,6 @@ export default function Home() {
               <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">整理思緒</h1>
               <p className="text-stone-500 font-serif-tc italic text-sm">在寧靜的空間裡，讓感受自然發芽。</p>
             </div>
-            {/* ✨ 工具列區塊 */}
             <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
               <div className="flex items-center bg-white border border-stone-200 rounded-lg px-3 py-2 shadow-sm">
                 <Calendar className="w-4 h-4 text-stone-400 mr-2" />
@@ -463,7 +576,6 @@ export default function Home() {
             ) : (
               sortedEntries.map(entry => (
                 <div key={entry.id} onClick={() => handleSelectEntry(entry)} className="group bg-white p-6 rounded-xl shadow-sm border border-stone-100 hover:shadow-md transition-all cursor-pointer flex gap-4 items-start">
-                  {/* 左側：日期圓圈 */}
                   <div className="flex flex-col items-center min-w-[60px] shrink-0">
                     <div className="w-12 h-12 rounded-full border border-stone-300 flex items-center justify-center text-stone-600 text-lg font-bold font-serif-tc mb-1 group-hover:bg-stone-900 group-hover:text-white transition-colors">
                       {entry.date.split('-')[2]}
@@ -472,36 +584,25 @@ export default function Home() {
                       {entry.date.split('-')[0]}.{entry.date.split('-')[1]}
                     </span>
                   </div>
-
-                  {/* 右側：內容與資訊 */}
                   <div className="flex-1 min-w-0 flex flex-col gap-2">
-                    
-                    {/* 上方：日記內容摘要 */}
                     <div className="flex items-center justify-between">
-                       {/* ✨ 這裡做了條件判斷：如果有內容就粗體，沒內容就淡灰色斜體 */}
                        <h3 className={`font-serif-tc text-base truncate pr-2 ${entry.content ? 'font-bold text-stone-800' : 'font-normal text-stone-400 italic'}`}>
                          {entry.content || "(尚無內容，等待你留下思緒...)"}
                        </h3>
                        <ChevronRight className="w-4 h-4 text-stone-300 group-hover:text-stone-600 shrink-0" />
                     </div>
-
-                    {/* 下方：資訊列 (時間 + AI 標籤) */}
                     <div className="flex items-center gap-3 text-xs text-stone-400 font-serif-tc">
-                       {/* AI 標籤 */}
                        {entry.hasCoachInteraction && (
                          <span className="inline-flex items-center px-2 py-0.5 bg-green-50 text-green-700 rounded-full border border-green-100 shrink-0 whitespace-nowrap">
                            <Sparkles className="w-3 h-3 mr-1 fill-green-700" />
                            已對話
                          </span>
                        )}
-                       
-                       {/* 編輯時間：使用 PenLine icon 並顯示完整格式 */}
                        <div className="flex items-center gap-1 shrink-0">
                          <PenLine className="w-3 h-3" />
                          <span>{formatUpdateTime(entry.updatedAt || entry.createdAt)}</span> 
                        </div>
                     </div>
-
                   </div>
                 </div>
               ))
@@ -541,6 +642,7 @@ export default function Home() {
           onAddMessage={handleUpdateMessages}
           onToggleBookmark={handleToggleBookmark}
           journalContent={content} 
+          usage={usage}
         />
       )}
 

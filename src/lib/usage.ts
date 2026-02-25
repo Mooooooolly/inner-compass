@@ -10,7 +10,7 @@ const getTodayDateString = (): string => {
 // 取得目前的用量數據，並自動處理跨日重置
 export const getUsageData = (): UsageData => {
   if (typeof window === 'undefined') {
-    return { lastUpdateDate: getTodayDateString(), totalDailyCount: 0 };
+    return { lastUpdateDate: getTodayDateString(), totalDailyCount: 0, sessionCounts: {} };
   }
 
   const storedValue = localStorage.getItem(USAGE_KEY);
@@ -28,11 +28,11 @@ export const getUsageData = (): UsageData => {
       }
     } catch (e) {
       // 如果解析失敗，則建立新的預設值
-      data = { lastUpdateDate: today, totalDailyCount: 0 };
+      data = { lastUpdateDate: today, totalDailyCount: 0, sessionCounts: {} };
     }
   } else {
     // 如果沒有儲存過，則建立新的預設值
-    data = { lastUpdateDate: today, totalDailyCount: 0 };
+    data = { lastUpdateDate: today, totalDailyCount: 0, sessionCounts: {} };
   }
 
   // 將（可能已更新的）資料存回 localStorage
@@ -43,7 +43,7 @@ export const getUsageData = (): UsageData => {
 // 增加當日的對話次數
 export const incrementUsageCount = (): UsageData => {
   if (typeof window === 'undefined') {
-     return { lastUpdateDate: getTodayDateString(), totalDailyCount: 0 };
+     return { lastUpdateDate: getTodayDateString(), totalDailyCount: 0, sessionCounts: {} };
   }
   
   const data = getUsageData(); // getUsageData 已經包含重置邏輯

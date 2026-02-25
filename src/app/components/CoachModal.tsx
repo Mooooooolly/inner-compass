@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Sparkles, Bookmark } from 'lucide-react';
 import { Message, UsageData } from '../../types';
-import { getUsageData, incrementUsageCount } from '@/lib/usage';
+import { getUsageData } from '@/lib/usage';
 
 interface CoachModalProps {
   onClose: () => void;
@@ -11,6 +11,7 @@ interface CoachModalProps {
   onAddMessage: (msg: Message) => void;
   onToggleBookmark: (index: number) => void;
   journalContent: string;
+  usage: UsageData;
 }
 
 // ✨ 用量圓點元件
@@ -30,20 +31,15 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   messages,
   onAddMessage,
   onToggleBookmark,
-  journalContent
+  journalContent,
+  usage
 }) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [usage, setUsage] = useState<UsageData>({ lastUpdateDate: '', totalDailyCount: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
 
   const isUsageLimited = usage.totalDailyCount >= 20;
-
-  // 載入時讀取用量
-  useEffect(() => {
-    setUsage(getUsageData());
-  }, []);
 
   // 自動捲動
   useEffect(() => {
@@ -73,16 +69,18 @@ export const CoachModal: React.FC<CoachModalProps> = ({
         const data = await response.json();
 
         if (!response.ok) {
+          let errorMessage = `API 請求失敗 (${response.status})`;
           if (response.status === 429) {
-            setUsage(prev => ({ ...prev, totalDailyCount: 20 }));
-            return;
+            errorMessage = "今日探索頻寬已滿載。"
+          } else if (data.reply) {
+            errorMessage = data.reply;
           }
-          throw new Error(data.reply || `API 請求失敗 (${response.status})`);
+          // Don't increment usage count on failure
+          onAddMessage({ role: 'assistant', content: `(系統訊息) ${errorMessage}` });
+          return; // Stop further processing
         }
 
         onAddMessage({ role: 'assistant', content: data.reply });
-        const newUsage = incrementUsageCount();
-        setUsage(newUsage);
 
       } catch (error: any) {
         console.error(error);
