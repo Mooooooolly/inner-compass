@@ -250,7 +250,7 @@ export default function Home() {
 
     const today = new Date();
     // 僅在週一執行
-    if (today.getDay() !== 1) {
+    if (false) { // 🛠️ 測試模式：暫時關閉週一檢查
       console.log("🌱 今天不是週一，跳過週報生成。");
       return;
     }
@@ -258,7 +258,7 @@ export default function Home() {
     const mondayDateString = today.toISOString().split('T')[0];
     const hasThisWeekReport = currentReports.some(r => r.report_date === mondayDateString);
 
-    if (hasThisWeekReport) {
+    if (false) { // 🛠️ 測試模式：允許重複生成週報進行測試
       console.log("✅ 本週週報已存在，無需生成。");
       return;
     }

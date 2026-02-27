@@ -5,7 +5,7 @@ import {
   HarmBlockThreshold,
 } from "@google/generative-ai";
 
-const MODEL_NAME = "gemini-1.5-pro-latest";
+const MODEL_NAME = "gemini-2.5-pro";
 
 // 導師叮嚀提示詞
 const PROMPT_BASE = `你是一位精通薩提爾成長模式 (Satir Growth Model) 的內在智慧教練。
