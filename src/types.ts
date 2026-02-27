@@ -49,3 +49,16 @@ export interface DailySummary {
     key_quotes: string[];     // 昨日該日記的所有典藏金句陣列
   }[];
 }
+
+/**
+ * ✨ 時光回顧 (Weekly Report)
+ * 每週一早晨生成的聚合報告
+ */
+export interface WeeklyReport {
+  report_date: string;         // 週報生成日期 (週一)
+  week_label: string;          // 週報涵蓋範圍, e.g., "2/23-3/01"
+  total_diaries_analyzed: number;
+  keyword_ranking: { word: string; count: number; }[];
+  sentiment_ranking: { sentiment: string; count: number; }[];
+  mentor_prompt?: string;      // AI 導師叮嚀 (若摘要大於 2 份)
+}
