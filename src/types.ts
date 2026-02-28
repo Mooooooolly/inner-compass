@@ -60,5 +60,8 @@ export interface WeeklyReport {
   total_diaries_analyzed: number;
   keyword_ranking: { word: string; count: number; }[];
   sentiment_ranking: { sentiment: string; count: number; }[];
+  plant_name: string;      // 植物名稱
+  weekly_insight: string;  // 英雄之旅文案
+  turning_point: string;   // 轉折點描述
   mentor_prompt?: string;      // AI 導師叮嚀 (若摘要大於 2 份)
 }
