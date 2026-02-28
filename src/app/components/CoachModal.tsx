@@ -14,13 +14,12 @@ interface CoachModalProps {
   usage: UsageData;
 }
 
-// ✨ 用量圓點元件
+// ✨ 用量圓點元件 (7次)
 const UsageDots = ({ count }: { count: number }) => {
-  const litDots = Math.floor(count / 4);
-  const dots = Array.from({ length: 5 }, (_, i) => (
+  const dots = Array.from({ length: 7 }, (_, i) => (
     <div
       key={i}
-      className={`w-1.5 h-1.5 rounded-full transition-colors ${i < litDots ? 'bg-[#2f4f2f]' : 'bg-stone-200'}`}
+      className={`w-1.5 h-1.5 rounded-full transition-colors ${i < count ? 'bg-[#2f4f2f]' : 'bg-stone-200'}`}
     />
   ));
   return <div className="flex items-center gap-1.5">{dots}</div>;
@@ -39,7 +38,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
 
-  const isUsageLimited = usage.totalDailyCount >= 20;
+  const isUsageLimited = usage.totalDailyCount >= 7; // 改為 7 次
 
   // 自動捲動
   useEffect(() => {
@@ -51,7 +50,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
   // 🧠 AI 核心邏輯
   useEffect(() => {
     const callAI = async (userMessage: string) => {
-      if (isProcessingRef.current || usage.totalDailyCount >= 20) return;
+      if (isProcessingRef.current || usage.totalDailyCount >= 7) return; // 改為 7 次
 
       isProcessingRef.current = true;
       setIsTyping(true);
@@ -75,9 +74,9 @@ export const CoachModal: React.FC<CoachModalProps> = ({
           } else if (data.reply) {
             errorMessage = data.reply;
           }
-          // Don't increment usage count on failure
+          
           onAddMessage({ role: 'assistant', content: `(系統訊息) ${errorMessage}` });
-          return; // Stop further processing
+          return; 
         }
 
         onAddMessage({ role: 'assistant', content: data.reply });
@@ -135,7 +134,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
               <div className="flex items-center gap-2 text-xs text-stone-500">
                 <p>今日探索頻寬</p>
                 <UsageDots count={usage.totalDailyCount} />
-                <span>{usage.totalDailyCount}/20</span>
+                <span>{usage.totalDailyCount}/7</span>
               </div>
             </div>
           </div>
@@ -180,7 +179,7 @@ export const CoachModal: React.FC<CoachModalProps> = ({
         <div className="p-4 bg-white border-t border-stone-100">
           {isUsageLimited ? (
             <div className="text-center text-sm text-stone-500 font-serif-tc px-4 py-3 bg-stone-50 rounded-lg shadow-sm">
-              今日的滋養已足夠。給思緒一點留白，讓覺察在土壤裡慢慢發酵。
+              今日的 7 次對話讓我們看見了珍貴的內在風景。讓這些發現靜靜沉澱，我們明天再繼續探索。
             </div>
           ) : (
             <div className="flex gap-2">

@@ -7,7 +7,6 @@ import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message, DailySummary, UsageData, WeeklyReport } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
 import { getUsageData, incrementUsageCount } from '@/lib/usage';
-import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard'; // 確保路徑正確
 
 // ✨ 通用警告視窗元件
 const WarningModal = ({ 
@@ -242,117 +241,179 @@ export default function Home() {
 
   // 🚀 每日足跡摘要生成函數
   const generateYesterdaySummary = async (currentEntries: JournalEntry[], currentSummaries: DailySummary[]) => {
-    // ... (此處代碼與之前相同，保持不變)
-  };
+    if (typeof window === 'undefined') return;
 
-  // 📊 每週回顧報告生成函數 (v2.0 溫室報告版)
-const generateWeeklyReport = async (currentSummaries: DailySummary[], currentReports: WeeklyReport[]) => {
-  if (typeof window === 'undefined') return;
+    console.log("🚀 啟動每日足跡摘要檢查...");
 
-  const today = new Date();
-  // 僅在週一執行
-  if (false) { // 🛠️ 測試模式：暫時關閉週一檢查
-    console.log("🌱 今天不是週一，跳過週報生成。");
-    return;
-  }
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayDateString = yesterday.toISOString().split('T')[0];
 
-  const mondayDateString = today.toISOString().split('T')[0];
-  const hasThisWeekReport = currentReports.some(r => r.report_date === mondayDateString);
+    const hasYesterdaySummary = currentSummaries.some(s => s.summary_date === yesterdayDateString);
 
-  if (false) { // 🛠️ 測試模式：允許重複生成週報進行測試
-    console.log("✅ 本週週報已存在，無需生成。");
-    return;
-  }
+    if (hasYesterdaySummary) {
+        console.log("✅ 昨日摘要已存在，無需生成。");
+        return;
+    }
 
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0); 
-  
-  const lastWeekSummaries = currentSummaries.filter(s => {
-    const sDate = new Date(s.summary_date);
-    return sDate >= sevenDaysAgo;
-  });
+    const yesterdayStart = new Date(yesterday);
+    yesterdayStart.setHours(0, 0, 0, 0);
+    const yesterdayEnd = new Date(yesterday);
+    yesterdayEnd.setHours(23, 59, 59, 999);
 
-  console.log(`📊 正在進行週報聚合，偵測到本週有 ${lastWeekSummaries.length} 份覺察紀錄...`);
+    const yesterdayEntries = currentEntries.filter(entry => {
+        const entryTimestamp = entry.updatedAt || entry.createdAt;
+        return entryTimestamp >= yesterdayStart.getTime() && entryTimestamp <= yesterdayEnd.getTime();
+    });
 
-  if (lastWeekSummaries.length === 0) {
-    console.log("✅ 本週無每日摘要，跳過週報生成。");
-    return;
-  }
+    if (yesterdayEntries.length === 0) {
+        console.log("✅ 昨日無日記變動，無需生成摘要。");
+        return;
+    }
 
-  // 1. 數據聚合 (關鍵字與情緒)
-  const allKeywords = lastWeekSummaries.flatMap(s => s.impacted_diaries.flatMap(d => d.topic_keywords));
-  const allSentiments = lastWeekSummaries.flatMap(s => s.impacted_diaries.flatMap(d => d.sentiment_tags));
+    console.log(`🔍 偵測到昨日有 ${yesterdayEntries.length} 篇日記變動，準備生成摘要...`);
 
-  const keywordRanking = Object.entries(allKeywords.reduce((acc, word) => {
-    acc[word] = (acc[word] || 0) + 1;
-    return acc;
-  }, {} as { [key: string]: number })).map(([word, count]) => ({ word, count })).sort((a, b) => b.count - a.count);
+    const combinedContent = yesterdayEntries.map(e => `日期：${e.date}\n內容：\n${e.content}`).join('\n\n---\n\n');
+    const key_quotes = yesterdayEntries.flatMap(entry =>
+        (entry.messages || []).filter(m => m.isBookmarked).map(m => m.content)
+    );
 
-  const sentimentRanking = Object.entries(allSentiments.reduce((acc, sentiment) => {
-    acc[sentiment] = (acc[sentiment] || 0) + 1;
-    return acc;
-  }, {} as { [key: string]: number })).map(([sentiment, count]) => ({ sentiment, count })).sort((a, b) => b.count - a.count);
-  
-  const weekEnd = new Date(today);
-  weekEnd.setDate(today.getDate() - 1); 
-  const weekStart = new Date(weekEnd);
-  weekStart.setDate(weekEnd.getDate() - 6); 
-  const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate().toString().padStart(2, '0')}`;
-  const week_label = `${formatDate(weekStart)}-${formatDate(weekEnd)}`;
-
-  // 2. 初始化回傳欄位
-  let plant_name = "成長之芽"; 
-  let weekly_insight = "這週妳穩定地在內在溫室中灌溉...";
-  let turning_point = "";
-
-  // 3. AI 深度分析 (呼叫 API 並接住 JSON)
-  if (lastWeekSummaries.length > 2) {
-    console.log("🤖 覺察紀錄充足，開始生成 AI 導師叮嚀與植物判定...");
     try {
-      const weeklyData = JSON.stringify({ keyword_ranking: keywordRanking, sentiment_ranking: sentimentRanking }, null, 2);
-      const response = await fetch('/api/summarize-weekly', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ weeklyData }),
-      });
+        const response = await fetch('/api/summarize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: combinedContent }),
+        });
 
-      if (!response.ok) throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
+        }
 
-      const result = await response.json();
-      
-      // 🌟 更新變數：從 API 回傳的 JSON 中抓取資料
-      plant_name = result.plant_name;
-      weekly_insight = result.weekly_insight;
-      turning_point = result.turning_point;
+        const analysis = await response.json();
+        console.log("🤖 AI 摘要生成成功！", analysis);
 
-      console.log("✨ 溫室週報數據生成成功！", { plant_name, turning_point });
+        const newSummary: DailySummary = {
+            summary_date: yesterdayDateString,
+            generated_at: new Date().toISOString(),
+            activity_stats: {
+                diaries_added: 0,
+                diaries_deleted: 0,
+                conversation_started: yesterdayEntries.some(e => e.hasCoachInteraction),
+                daily_limit_reached: usage.totalDailyCount >= 7, // 每日上限
+            },
+            impacted_diaries: [{
+                diary_date: yesterdayDateString,
+                sentiment_tags: analysis.sentiment_tags,
+                iceberg_depth: analysis.iceberg_depth,
+                topic_keywords: analysis.topic_keywords,
+                key_quotes: key_quotes,
+            }]
+        };
+
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+        const updatedSummaries = [...currentSummaries, newSummary].filter(s => new Date(s.generated_at) > ninetyDaysAgo);
+
+        localStorage.setItem('inner_compass_summaries', JSON.stringify(updatedSummaries));
+        setSummaries(updatedSummaries);
+        console.log("💾 新的每日摘要已儲存，並清除了 90 天前的舊摘要。");
 
     } catch (error) {
-      console.error("❌ 生成 AI 週報失敗:", error);
+        console.error("❌ 生成每日摘要失敗:", error);
     }
-  }
-
-  // 4. 存入 LocalStorage
-  const newReport: WeeklyReport = {
-    report_date: mondayDateString,
-    week_label,
-    total_diaries_analyzed: lastWeekSummaries.length,
-    keyword_ranking: keywordRanking,
-    sentiment_ranking: sentimentRanking,
-    plant_name,      // 存入植物名稱
-    weekly_insight,  // 存入英雄之旅文案
-    turning_point,   // 存入轉折點
-    mentor_prompt: weekly_insight, // 兼容舊版欄位
   };
 
-  const updatedReports = [...currentReports, newReport];
-  localStorage.setItem('inner_compass_weekly_reports', JSON.stringify(updatedReports));
-  setWeeklyReports(updatedReports);
-  console.log("💾 新的「內在溫室」週報已儲存。");
-};
-// 取得最新的一筆週報資料
-const latestReport = weeklyReports.length > 0 ? weeklyReports[weeklyReports.length - 1] : null;
+  // 📊 每週回顧報告生成函數
+  const generateWeeklyReport = async (currentSummaries: DailySummary[], currentReports: WeeklyReport[]) => {
+    if (typeof window === 'undefined') return;
+
+    const today = new Date();
+    if (today.getDay() !== 1) {
+      console.log("🌱 今天不是週一，跳過週報生成。");
+      return;
+    }
+
+    const mondayDateString = today.toISOString().split('T')[0];
+    const hasThisWeekReport = currentReports.some(r => r.report_date === mondayDateString);
+
+    if (hasThisWeekReport) {
+      console.log("✅ 本週週報已存在，無需生成。");
+      return;
+    }
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+
+    const lastWeekSummaries = currentSummaries.filter(s => new Date(s.generated_at) >= sevenDaysAgo);
+
+    console.log(`📊 正在進行週報聚合，偵測到本週有 ${lastWeekSummaries.length} 份覺察紀錄...`);
+
+    if (lastWeekSummaries.length === 0) {
+      console.log("✅ 本週無每日摘要，跳過週報生成。");
+      return;
+    }
+
+    const allKeywords = lastWeekSummaries.flatMap(s => s.impacted_diaries.flatMap(d => d.topic_keywords));
+    const allSentiments = lastWeekSummaries.flatMap(s => s.impacted_diaries.flatMap(d => d.sentiment_tags));
+
+    const keywordRanking = Object.entries(allKeywords.reduce((acc, word) => {
+      acc[word] = (acc[word] || 0) + 1;
+      return acc;
+    }, {} as { [key: string]: number })).map(([word, count]) => ({ word, count })).sort((a, b) => b.count - a.count);
+
+    const sentimentRanking = Object.entries(allSentiments.reduce((acc, sentiment) => {
+      acc[sentiment] = (acc[sentiment] || 0) + 1;
+      return acc;
+    }, {} as { [key: string]: number })).map(([sentiment, count]) => ({ sentiment, count })).sort((a, b) => b.count - a.count);
+    
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() - 1);
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekEnd.getDate() - 6);
+    const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate().toString().padStart(2, '0')}`;
+    const week_label = `${formatDate(weekStart)}-${formatDate(weekEnd)}`;
+
+    let mentor_prompt: string | undefined = undefined;
+
+    if (lastWeekSummaries.length > 2) {
+      console.log("🤖 覺察紀錄充足，開始生成 AI 導師叮嚀...");
+      try {
+        const weeklyData = JSON.stringify({ keyword_ranking: keywordRanking, sentiment_ranking: sentimentRanking }, null, 2);
+        const response = await fetch('/api/summarize-weekly', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weeklyData }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
+        }
+
+        const result = await response.json();
+        mentor_prompt = result.mentor_prompt;
+        console.log("✨ AI 導師叮嚀生成成功！", mentor_prompt);
+
+      } catch (error) {
+        console.error("❌ 生成 AI 導師叮嚀失敗:", error);
+      }
+    }
+
+    const newReport: WeeklyReport = {
+      report_date: mondayDateString,
+      week_label,
+      total_diaries_analyzed: lastWeekSummaries.length,
+      keyword_ranking: keywordRanking,
+      sentiment_ranking: sentimentRanking,
+      mentor_prompt,
+    };
+
+    const updatedReports = [...currentReports, newReport];
+    localStorage.setItem('inner_compass_weekly_reports', JSON.stringify(updatedReports));
+    setWeeklyReports(updatedReports);
+    console.log("💾 新的週報已儲存。");
+  };
 
   // 🔄 整合的啟動加載 Hook
   useEffect(() => {
@@ -497,6 +558,7 @@ const latestReport = weeklyReports.length > 0 ? weeklyReports[weeklyReports.leng
       .filter(m => m.isBookmarked)
       .map(m => ({ ...m, originDate: entry.date, originId: entry.id }))
   );
+
   return (
     <Layout 
       activeView={view} 
@@ -584,12 +646,6 @@ const latestReport = weeklyReports.length > 0 ? weeklyReports[weeklyReports.leng
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">紀錄軌跡</h1>
           </div>
-          {/* 🌿 這裡就是我們要插入的地方：週度「內在溫室」報告 */}
-          {latestReport && (
-            <div className="mb-12">
-               <WeeklyGreenhouseCard report={latestReport} />
-            </div>
-          )}
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
                <div className="text-center py-20">
