@@ -265,8 +265,12 @@ export default function Home() {
 
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
-
-    const lastWeekSummaries = currentSummaries.filter(s => new Date(s.generated_at) >= sevenDaysAgo);
+    sevenDaysAgo.setHours(0, 0, 0, 0); // 設定為當天凌晨，確保能抓到完整 7 天
+    
+    const lastWeekSummaries = currentSummaries.filter(s => {
+      const sDate = new Date(s.summary_date);
+      return sDate >= sevenDaysAgo;
+    });
 
     console.log(`📊 正在進行週報聚合，偵測到本週有 ${lastWeekSummaries.length} 份覺察紀錄...`);
 
