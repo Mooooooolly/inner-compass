@@ -407,6 +407,9 @@ export default function Home() {
       keyword_ranking: keywordRanking,
       sentiment_ranking: sentimentRanking,
       mentor_prompt,
+      plant_name: '', // Placeholder
+      weekly_insight: '', // Placeholder
+      turning_point: '' // Placeholder
     };
 
     const updatedReports = [...currentReports, newReport];
