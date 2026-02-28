@@ -7,6 +7,7 @@ import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message, DailySummary, UsageData, WeeklyReport } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
 import { getUsageData, incrementUsageCount } from '@/lib/usage';
+import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard'; // 確保路徑正確
 
 // ✨ 通用警告視窗元件
 const WarningModal = ({ 
@@ -350,6 +351,8 @@ const generateWeeklyReport = async (currentSummaries: DailySummary[], currentRep
   setWeeklyReports(updatedReports);
   console.log("💾 新的「內在溫室」週報已儲存。");
 };
+// 取得最新的一筆週報資料
+const latestReport = weeklyReports.length > 0 ? weeklyReports[weeklyReports.length - 1] : null;
 
   // 🔄 整合的啟動加載 Hook
   useEffect(() => {
@@ -494,7 +497,6 @@ const generateWeeklyReport = async (currentSummaries: DailySummary[], currentRep
       .filter(m => m.isBookmarked)
       .map(m => ({ ...m, originDate: entry.date, originId: entry.id }))
   );
-
   return (
     <Layout 
       activeView={view} 
@@ -582,6 +584,12 @@ const generateWeeklyReport = async (currentSummaries: DailySummary[], currentRep
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">紀錄軌跡</h1>
           </div>
+          {/* 🌿 這裡就是我們要插入的地方：週度「內在溫室」報告 */}
+          {latestReport && (
+            <div className="mb-12">
+               <WeeklyGreenhouseCard report={latestReport} />
+            </div>
+          )}
           <div className="space-y-4">
             {sortedEntries.length === 0 ? (
                <div className="text-center py-20">
