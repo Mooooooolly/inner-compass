@@ -7,6 +7,7 @@ import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message, DailySummary, UsageData, WeeklyReport } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
 import { getUsageData, incrementUsageCount } from '@/lib/usage';
+import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard';
 
 // ✨ 通用警告視窗元件
 const WarningModal = ({ 
@@ -330,7 +331,9 @@ export default function Home() {
     if (typeof window === 'undefined') return;
 
     const today = new Date();
-    if (today.getDay() !== 1) {
+    const isDebugMode = localStorage.getItem('debug_weekly') === 'true';
+
+    if (today.getDay() !== 1 && !isDebugMode) {
       console.log("🌱 今天不是週一，跳過週報生成。");
       return;
     }
@@ -338,7 +341,7 @@ export default function Home() {
     const mondayDateString = today.toISOString().split('T')[0];
     const hasThisWeekReport = currentReports.some(r => r.report_date === mondayDateString);
 
-    if (hasThisWeekReport) {
+    if (hasThisWeekReport && !isDebugMode) {
       console.log("✅ 本週週報已存在，無需生成。");
       return;
     }
@@ -375,47 +378,41 @@ export default function Home() {
     const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate().toString().padStart(2, '0')}`;
     const week_label = `${formatDate(weekStart)}-${formatDate(weekEnd)}`;
 
-    let mentor_prompt: string | undefined = undefined;
+    try {
+      const weeklyData = JSON.stringify({ keyword_ranking: keywordRanking, sentiment_ranking: sentimentRanking }, null, 2);
+      const response = await fetch('/api/summarize-weekly', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weeklyData }),
+      });
 
-    if (lastWeekSummaries.length > 2) {
-      console.log("🤖 覺察紀錄充足，開始生成 AI 導師叮嚀...");
-      try {
-        const weeklyData = JSON.stringify({ keyword_ranking: keywordRanking, sentiment_ranking: sentimentRanking }, null, 2);
-        const response = await fetch('/api/summarize-weekly', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ weeklyData }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
-        }
-
-        const result = await response.json();
-        mentor_prompt = result.mentor_prompt;
-        console.log("✨ AI 導師叮嚀生成成功！", mentor_prompt);
-
-      } catch (error) {
-        console.error("❌ 生成 AI 導師叮嚀失敗:", error);
+      if (!response.ok) {
+        throw new Error(`API 請求失敗，狀態碼: ${response.status}`);
       }
+
+      const result = await response.json();
+      
+      const newReport: WeeklyReport = {
+        report_date: mondayDateString,
+        week_label,
+        total_diaries_analyzed: lastWeekSummaries.length,
+        keyword_ranking: keywordRanking,
+        sentiment_ranking: sentimentRanking,
+        plant_name: result.plant_name,
+        weekly_insight: result.weekly_insight,
+        turning_point: result.turning_point,
+        image_url: result.image_url,
+        mentor_prompt: result.mentor_prompt
+      };
+
+      const updatedReports = [...currentReports, newReport];
+      localStorage.setItem('inner_compass_weekly_reports', JSON.stringify(updatedReports));
+      setWeeklyReports(updatedReports);
+      console.log("💾 新的週報已儲存。");
+
+    } catch (error) {
+      console.error("❌ 生成週報失敗:", error);
     }
-
-    const newReport: WeeklyReport = {
-      report_date: mondayDateString,
-      week_label,
-      total_diaries_analyzed: lastWeekSummaries.length,
-      keyword_ranking: keywordRanking,
-      sentiment_ranking: sentimentRanking,
-      mentor_prompt,
-      plant_name: '', // Placeholder
-      weekly_insight: '', // Placeholder
-      turning_point: '' // Placeholder
-    };
-
-    const updatedReports = [...currentReports, newReport];
-    localStorage.setItem('inner_compass_weekly_reports', JSON.stringify(updatedReports));
-    setWeeklyReports(updatedReports);
-    console.log("💾 新的週報已儲存。");
   };
 
   // 🔄 整合的啟動加載 Hook
@@ -562,6 +559,8 @@ export default function Home() {
       .map(m => ({ ...m, originDate: entry.date, originId: entry.id }))
   );
 
+  const latestReport = weeklyReports.length > 0 ? weeklyReports[weeklyReports.length - 1] : null;
+
   return (
     <Layout 
       activeView={view} 
@@ -646,6 +645,7 @@ export default function Home() {
       )}
       {view === 'list' && (
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
+           {latestReport && <WeeklyGreenhouseCard report={latestReport} />}
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">紀錄軌跡</h1>
           </div>

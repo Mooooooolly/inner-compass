@@ -22,7 +22,7 @@ export interface JournalEntry {
  */
 export interface UsageData {
   lastUpdateDate: string;     // 儲存格式如 "2026-02-24"
-  totalDailyCount: number;    // 當日總計對話次數 (上限 20)
+  totalDailyCount: number;    // 當日總計對話次數 (上限 7)
   sessionCounts: {            // 單篇日記的對話次數紀錄 (上限 10)
     [diaryId: string]: number;
   };
@@ -64,4 +64,5 @@ export interface WeeklyReport {
   weekly_insight: string;  // 英雄之旅文案
   turning_point: string;   // 轉折點描述
   mentor_prompt?: string;      // AI 導師叮嚀 (若摘要大於 2 份)
+  image_url?: string; // Base64
 }
