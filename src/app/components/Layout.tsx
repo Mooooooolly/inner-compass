@@ -1,4 +1,4 @@
-import { PenLine, Book, Bookmark, MessageSquare } from 'lucide-react';
+import { PenLine, Book, Bookmark, MessageSquare, BookOpen } from 'lucide-react';
 import { ViewState } from '@/types';
 
 const NavButton = ({ 
