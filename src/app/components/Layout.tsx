@@ -14,11 +14,11 @@ const NavButton = ({
 }) => (
   <button 
     onClick={onClick}
-    className={`flex flex-col items-center gap-1 p-2 rounded-lg w-full transition-colors ${isActive ? 'text-stone-900' : 'text-stone-400 hover:bg-stone-100/50 hover:text-stone-600'}`}
+    className={`flex items-center justify-center p-3 rounded-lg w-full transition-colors ${isActive ? 'text-stone-900 bg-stone-100/80' : 'text-stone-400 hover:bg-stone-100/50 hover:text-stone-600'}`}
     aria-label={label}
+    title={label}
   >
     {children}
-    <span className="text-[10px] font-serif-tc font-semibold">{label}</span>
   </button>
 );
 
