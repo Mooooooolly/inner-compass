@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Book, MessageSquare, Loader2, PenLine } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
-import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard'; // Assuming this is now correctly in its own file
+import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard';
 import { ViewState, JournalEntry, Message, DailySummary, UsageData, WeeklyReport } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
 import { getUsageData, incrementUsageCount } from '@/lib/usage';
@@ -631,7 +631,7 @@ export default function Home() {
       )}
       {view === 'list' && (
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
-           <WeeklyGreenhouseCard report={latestReport} />
+           {latestReport && <WeeklyGreenhouseCard report={latestReport} />}
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">紀錄軌跡</h1>
           </div>
