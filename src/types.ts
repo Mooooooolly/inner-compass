@@ -50,6 +50,6 @@ export type WeeklyReport = {
   sentiment_ranking: { sentiment: string; count: number }[];
   plant_name: string;
   weekly_insight: string;
-  turning_point: string;
-  image_url: string; // Can be Base64 or a URL, or empty
+  turning_point?: string; // This field is now optional
+  image_url: string; // Can be a local path or empty
 };

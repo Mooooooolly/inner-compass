@@ -390,7 +390,6 @@ export default function Home() {
         plant_name: result.plant_name || '新芽', // Fallback for safety
         weekly_insight: result.weekly_insight || '新的開始正在醞釀中。',
         image_url: imageUrl, // Use the locally constructed URL
-        turning_point: undefined, // Ensure turning_point is not in the object
       };
 
       const updatedReports = isDebugMode 
