@@ -4,44 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Save, Trash2, Calendar, Check, X, ShieldAlert, Sparkles, ChevronRight, Bookmark, Quote, AlertTriangle, Book, MessageSquare, Loader2, PenLine } from 'lucide-react';
 import { Layout } from './components/Layout';
 import { CoachModal } from './components/CoachModal';
+import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard'; // Assuming this is now correctly in its own file
 import { ViewState, JournalEntry, Message, DailySummary, UsageData, WeeklyReport } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
 import { getUsageData, incrementUsageCount } from '@/lib/usage';
-
-// Placeholder for WeeklyGreenhouseCard as it's not in a separate file
-const WeeklyGreenhouseCard = ({ report }: { report: WeeklyReport | null }) => {
-  if (!report) return null;
-
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-md border border-stone-100 animate-in fade-in">
-      <h2 className="text-2xl font-serif-tc font-bold text-stone-900 mb-2">內在溫室週報</h2>
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1">
-          <h3 className="text-xl font-serif-tc font-semibold text-[#2f4f2f] mb-2">
-            {report.plant_name}
-          </h3>
-          <p className="text-stone-600 font-serif-tc leading-relaxed mb-4">
-            {report.weekly_insight}
-          </p>
-          <div className="bg-stone-50 p-4 rounded-lg">
-            <h4 className="font-serif-tc font-bold text-stone-800 mb-1">轉折點</h4>
-            <p className="text-stone-500 font-serif-tc text-sm">
-              {report.turning_point}
-            </p>
-          </div>
-        </div>
-        <div className="w-full md:w-48 h-48 bg-stone-100 rounded-lg flex items-center justify-center shrink-0">
-          {report.image_url ? (
-            <img src={report.image_url} alt={report.plant_name} className="w-full h-full object-cover rounded-lg" />
-          ) : (
-            <p className="text-stone-400 font-serif-tc text-sm">植物正在發芽中...</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
 const WarningModal = ({ 
   isOpen, 
@@ -360,7 +326,6 @@ export default function Home() {
     const today = new Date();
     const isDebugMode = localStorage.getItem('debug_weekly') === 'true';
 
-    // 1. & 2. Integrated Test Mode & Skip Duplicate Check
     if (today.getDay() !== 1 && !isDebugMode) {
         console.log("🌱 今天不是週一，跳過週報生成。");
         return;
@@ -412,24 +377,22 @@ export default function Home() {
       }
 
       const result = await response.json();
+
+      // Construct the image URL from the plant_key
+      const imageUrl = `/plants/${result.plant_key}.jpg`;
       
-      // 3. Perfected Data Handling
       const newReport: WeeklyReport = {
         report_date: mondayDateString,
         week_label,
         total_diaries_analyzed: lastWeekSummaries.length,
         keyword_ranking: keywordRanking,
         sentiment_ranking: sentimentRanking,
-        plant_name: result.plant_name || '', // Fallback for safety
-        weekly_insight: result.weekly_insight || '',
-        turning_point: result.turning_point || '',
-        image_url: result.image_url || '', // Handles Base64 or empty string
-        // The two fields below are not sent from the new API, so we remove them to fix the type error
-        // visual_description: result.visual_description, 
-        // mentor_prompt: result.mentor_prompt,
+        plant_name: result.plant_name || '新芽', // Fallback for safety
+        weekly_insight: result.weekly_insight || '新的開始正在醞釀中。',
+        image_url: imageUrl, // Use the locally constructed URL
+        turning_point: undefined, // Ensure turning_point is not in the object
       };
 
-      // Replace existing report if in debug mode, otherwise add new
       const updatedReports = isDebugMode 
         ? [newReport, ...currentReports.filter(r => r.report_date !== mondayDateString)]
         : [...currentReports, newReport];
