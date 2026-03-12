@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
 import { Noto_Serif_TC } from "next/font/google";
 import "./globals.css";
-import Script from "next/script";
+import Script from 'next/script';
 
 const notoSerifTC = Noto_Serif_TC({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-noto-serif-tc",
+  weight: ["400", "700"],
   display: "swap",
+  variable: "--font-noto-serif-tc",
 });
 
 export const metadata: Metadata = {
-  title: "Inner Compass",
-  description: "你的內在智慧羅盤",
-  manifest: "/manifest.json",
+  title: "Inner Compass - 你的內在羅盤",
+  description: "一個讓你整理思緒、與內在智慧對話的數位空間。",
 };
 
 export default function RootLayout({
@@ -23,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-TW">
-      <body
+      <body 
         className={`${notoSerifTC.variable} font-serif-tc antialiased bg-[#fdfcf8] text-stone-900`}
         suppressHydrationWarning // 👈 加上這一行，就能忽略外掛造成的錯誤
       >

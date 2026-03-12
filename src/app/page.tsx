@@ -7,9 +7,42 @@ import { CoachModal } from './components/CoachModal';
 import { ViewState, JournalEntry, Message, DailySummary, UsageData, WeeklyReport } from '@/types';
 import InAppBrowserBanner from './components/InAppBrowserBanner';
 import { getUsageData, incrementUsageCount } from '@/lib/usage';
-import { WeeklyGreenhouseCard } from './components/WeeklyGreenhouseCard';
 
-// ✨ 通用警告視窗元件
+// Placeholder for WeeklyGreenhouseCard as it's not in a separate file
+const WeeklyGreenhouseCard = ({ report }: { report: WeeklyReport | null }) => {
+  if (!report) return null;
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-md border border-stone-100 animate-in fade-in">
+      <h2 className="text-2xl font-serif-tc font-bold text-stone-900 mb-2">內在溫室週報</h2>
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex-1">
+          <h3 className="text-xl font-serif-tc font-semibold text-[#2f4f2f] mb-2">
+            {report.plant_name}
+          </h3>
+          <p className="text-stone-600 font-serif-tc leading-relaxed mb-4">
+            {report.weekly_insight}
+          </p>
+          <div className="bg-stone-50 p-4 rounded-lg">
+            <h4 className="font-serif-tc font-bold text-stone-800 mb-1">轉折點</h4>
+            <p className="text-stone-500 font-serif-tc text-sm">
+              {report.turning_point}
+            </p>
+          </div>
+        </div>
+        <div className="w-full md:w-48 h-48 bg-stone-100 rounded-lg flex items-center justify-center shrink-0">
+          {report.image_url ? (
+            <img src={report.image_url} alt={report.plant_name} className="w-full h-full object-cover rounded-lg" />
+          ) : (
+            <p className="text-stone-400 font-serif-tc text-sm">植物正在發芽中...</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const WarningModal = ({ 
   isOpen, 
   onClose, 
@@ -62,7 +95,6 @@ const WarningModal = ({
   );
 };
 
-// 🔒 隱私權提醒視窗 (只顯示一次)
 const PrivacyNoticeModal = ({ 
   isOpen, 
   onClose 
@@ -119,7 +151,6 @@ const PrivacyNoticeModal = ({
   );
 };
 
-// 📧 回饋表單視窗
 const FeedbackModal = ({ 
   isOpen, 
   onClose 
@@ -209,7 +240,6 @@ const FeedbackModal = ({
   );
 };
 
-// 🛠️ 輔助函式：調整為 mm-dd hh:mm 格式
 const formatUpdateTime = (timestamp: number) => {
   const d = new Date(timestamp);
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -235,12 +265,10 @@ export default function Home() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [showPrivacyNotice, setShowPrivacyNotice] = useState(false);
 
-  // ✨ 新增狀態
   const [usage, setUsage] = useState<UsageData>({ lastUpdateDate: '', totalDailyCount: 0, sessionCounts: {} });
   const [summaries, setSummaries] = useState<DailySummary[]>([]);
   const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([]);
 
-  // 🚀 每日足跡摘要生成函數
   const generateYesterdaySummary = async (currentEntries: JournalEntry[], currentSummaries: DailySummary[]) => {
     if (typeof window === 'undefined') return;
 
@@ -301,7 +329,7 @@ export default function Home() {
                 diaries_added: 0,
                 diaries_deleted: 0,
                 conversation_started: yesterdayEntries.some(e => e.hasCoachInteraction),
-                daily_limit_reached: usage.totalDailyCount >= 7, // 每日上限
+                daily_limit_reached: usage.totalDailyCount >= 7, // Logic aligned with 7 dialogues
             },
             impacted_diaries: [{
                 diary_date: yesterdayDateString,
@@ -326,34 +354,34 @@ export default function Home() {
     }
   };
 
-  // 📊 每週回顧報告生成函數
   const generateWeeklyReport = async (currentSummaries: DailySummary[], currentReports: WeeklyReport[]) => {
     if (typeof window === 'undefined') return;
 
     const today = new Date();
     const isDebugMode = localStorage.getItem('debug_weekly') === 'true';
 
+    // 1. & 2. Integrated Test Mode & Skip Duplicate Check
     if (today.getDay() !== 1 && !isDebugMode) {
-      console.log("🌱 今天不是週一，跳過週報生成。");
-      return;
+        console.log("🌱 今天不是週一，跳過週報生成。");
+        return;
     }
 
     const mondayDateString = today.toISOString().split('T')[0];
     const hasThisWeekReport = currentReports.some(r => r.report_date === mondayDateString);
 
     if (hasThisWeekReport && !isDebugMode) {
-      console.log("✅ 本週週報已存在，無需生成。");
-      return;
+        console.log("✅ 本週週報已存在，無需生成。");
+        return;
     }
+    
+    console.log(isDebugMode ? "[DEBUG MODE] 强制觸發週報生成..." : "📊 正在進行週報聚合...");
 
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
 
     const lastWeekSummaries = currentSummaries.filter(s => new Date(s.generated_at) >= sevenDaysAgo);
 
-    console.log(`📊 正在進行週報聚合，偵測到本週有 ${lastWeekSummaries.length} 份覺察紀錄...`);
-
-    if (lastWeekSummaries.length === 0) {
+    if (lastWeekSummaries.length === 0 && !isDebugMode) {
       console.log("✅ 本週無每日摘要，跳過週報生成。");
       return;
     }
@@ -361,15 +389,8 @@ export default function Home() {
     const allKeywords = lastWeekSummaries.flatMap(s => s.impacted_diaries.flatMap(d => d.topic_keywords));
     const allSentiments = lastWeekSummaries.flatMap(s => s.impacted_diaries.flatMap(d => d.sentiment_tags));
 
-    const keywordRanking = Object.entries(allKeywords.reduce((acc, word) => {
-      acc[word] = (acc[word] || 0) + 1;
-      return acc;
-    }, {} as { [key: string]: number })).map(([word, count]) => ({ word, count })).sort((a, b) => b.count - a.count);
-
-    const sentimentRanking = Object.entries(allSentiments.reduce((acc, sentiment) => {
-      acc[sentiment] = (acc[sentiment] || 0) + 1;
-      return acc;
-    }, {} as { [key: string]: number })).map(([sentiment, count]) => ({ sentiment, count })).sort((a, b) => b.count - a.count);
+    const keywordRanking = Object.entries(allKeywords.reduce((acc, word) => { acc[word] = (acc[word] || 0) + 1; return acc; }, {} as { [key: string]: number })).map(([word, count]) => ({ word, count })).sort((a, b) => b.count - a.count);
+    const sentimentRanking = Object.entries(allSentiments.reduce((acc, sentiment) => { acc[sentiment] = (acc[sentiment] || 0) + 1; return acc; }, {} as { [key: string]: number })).map(([sentiment, count]) => ({ sentiment, count })).sort((a, b) => b.count - a.count);
     
     const weekEnd = new Date(today);
     weekEnd.setDate(today.getDate() - 1);
@@ -392,20 +413,27 @@ export default function Home() {
 
       const result = await response.json();
       
+      // 3. Perfected Data Handling
       const newReport: WeeklyReport = {
         report_date: mondayDateString,
         week_label,
         total_diaries_analyzed: lastWeekSummaries.length,
         keyword_ranking: keywordRanking,
         sentiment_ranking: sentimentRanking,
-        plant_name: result.plant_name,
-        weekly_insight: result.weekly_insight,
-        turning_point: result.turning_point,
-        image_url: result.image_url,
-        mentor_prompt: result.mentor_prompt
+        plant_name: result.plant_name || '', // Fallback for safety
+        weekly_insight: result.weekly_insight || '',
+        turning_point: result.turning_point || '',
+        image_url: result.image_url || '', // Handles Base64 or empty string
+        // The two fields below are not sent from the new API, so we remove them to fix the type error
+        // visual_description: result.visual_description, 
+        // mentor_prompt: result.mentor_prompt,
       };
 
-      const updatedReports = [...currentReports, newReport];
+      // Replace existing report if in debug mode, otherwise add new
+      const updatedReports = isDebugMode 
+        ? [newReport, ...currentReports.filter(r => r.report_date !== mondayDateString)]
+        : [...currentReports, newReport];
+
       localStorage.setItem('inner_compass_weekly_reports', JSON.stringify(updatedReports));
       setWeeklyReports(updatedReports);
       console.log("💾 新的週報已儲存。");
@@ -415,7 +443,6 @@ export default function Home() {
     }
   };
 
-  // 🔄 整合的啟動加載 Hook
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hasAcknowledged = localStorage.getItem('inner_compass_privacy_acknowledged');
@@ -436,14 +463,12 @@ export default function Home() {
       setWeeklyReports(initialWeeklyReports);
       setUsage(getUsageData());
 
-      // 觸發異步報告生成
       generateYesterdaySummary(initialEntries, initialSummaries);
       generateWeeklyReport(initialSummaries, initialWeeklyReports);
     }
   }, []);
 
 
-  // 💾 儲存日記 Hook
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('inner_compass_entries', JSON.stringify(entries));
@@ -493,7 +518,6 @@ export default function Home() {
     setShowCoach(true);
   };
 
-  // 📈 更新對話與 API 用量
   const handleUpdateMessages = (newMsg: Message) => {
     setActiveMessages(prev => {
       const updatedMsgs = [...prev, newMsg];
@@ -559,7 +583,7 @@ export default function Home() {
       .map(m => ({ ...m, originDate: entry.date, originId: entry.id }))
   );
 
-  const latestReport = weeklyReports.length > 0 ? weeklyReports[weeklyReports.length - 1] : null;
+  const latestReport = weeklyReports.length > 0 ? weeklyReports.sort((a,b) => new Date(b.report_date).getTime() - new Date(a.report_date).getTime())[0] : null;
 
   return (
     <Layout 
@@ -578,7 +602,6 @@ export default function Home() {
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-stone-200 gap-4 mt-4 md:mt-0">
             <div className="space-y-2">
               <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">整理思緒</h1>
-              <p className="text-stone-500 font-serif-tc italic text-sm">在寧靜的空間裡，讓感受自然發芽。</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
               <div className="flex items-center bg-white border border-stone-200 rounded-lg px-3 py-2 shadow-sm">
@@ -645,7 +668,7 @@ export default function Home() {
       )}
       {view === 'list' && (
         <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in">
-           {latestReport && <WeeklyGreenhouseCard report={latestReport} />}
+           <WeeklyGreenhouseCard report={latestReport} />
           <div className="border-b border-stone-200 pb-4 mt-4 md:mt-0">
              <h1 className="text-3xl font-serif-tc font-bold text-stone-900">紀錄軌跡</h1>
           </div>

@@ -1,24 +1,21 @@
-import { GoogleGenerativeAI, Part, Content, GenerateContentResponse, FinishReason } from '@google/generative-ai';
+import { GoogleGenerativeAI, Part, Content, GenerateContentResponse, FinishReason, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Helper to extract JSON from markdown
+// Helper to extract JSON from markdown more robustly
 function extractJsonFromMarkdown(text: string): string {
-  const match = text.match(/```json\n([\s\S]*?)\n```/);
-  return match ? match[1] : text;
+  return text.replace(/```json|```/g, "").trim();
 }
 
-// Type guard for fileData
-function isFileData(part: Part): part is { fileData: { mimeType: string; fileUri: string } } {
-    return 'fileData' in part && part.fileData !== null && typeof part.fileData === 'object';
+// Type guards
+function isInlineData(part: Part): part is { inlineData: { mimeType: string; data: string } } {
+    return 'inlineData' in part && part.inlineData !== null && typeof part.inlineData === 'object';
 }
-
-// Type guard for content
 function hasContent(candidate: any): candidate is { content: Content } {
     return 'content' in candidate && candidate.content !== null && typeof candidate.content === 'object';
 }
 
-// A more detailed error response
+// Error response helper
 function createErrorResponse(message: string, status: number, details?: any) {
     console.error('API Error:', message, details || '');
     return new Response(JSON.stringify({ error: message, details }), { status });
@@ -32,12 +29,11 @@ export async function POST(req: Request) {
   try {
     const { weeklyData } = await req.json();
 
-    const modelName = 'gemini-2.5-flash'; 
-    const model = genAI.getGenerativeModel({ model: modelName });
-
     // 1. Text Generation
+    console.log("Attempting text generation with models/gemini-2.5-flash...");
+    const textModel = genAI.getGenerativeModel({ model: 'models/gemini-2.5-flash' });
     const textPrompt = `
-    Analyze the following weekly user journal data. Based on the data, generate a unique and creative plant name that metaphorically represents the user's emotional journey for the week. Also, provide a concise visual description (in English) for a botanical illustration of this plant, a 80-word insightful text (in Traditional Chinese), and a turning point moment. The output must be a valid JSON object, enclosed in markdown format (\`\`\`json ... \`\`\`).
+    Analyze the following weekly user journal data. Based on the data, generate a real-world plant name (in Traditional Chinese only, no pinyin) that metaphorically represents the user's emotional journey for the week. Also, provide a concise visual description (in English) for a botanical illustration of this plant, a 50-word insightful text (in Traditional Chinese), and a turning point moment. The output must be a valid JSON object.
 
     **Weekly Data:**
     ${weeklyData}
@@ -45,56 +41,53 @@ export async function POST(req: Request) {
     **JSON Output Format:**
     \`\`\`json
     {
-      "plant_name": "[自創植物名]",
+      "plant_name": "[一個真實存在的植物中文名，不要附上拼音]",
       "visual_description": "[給繪圖工具的英文視覺描述]",
-      "weekly_insight": "[80字文案]",
+      "weekly_insight": "[50字文案]",
       "turning_point": "[轉折點]"
     }
     \`\`\`
     `;
-
-    const textResult = await model.generateContent(textPrompt);
+    
+    const textResult = await textModel.generateContent(textPrompt);
     const textResponse = await textResult.response;
-    if (textResponse.promptFeedback?.blockReason) {
-        return createErrorResponse('Text generation blocked', 500, { reason: textResponse.promptFeedback.blockReason });
-    }
-
     const rawText = textResponse.text();
     const jsonText = extractJsonFromMarkdown(rawText);
-    let analysis;
+    const analysis = JSON.parse(jsonText);
+    console.log("Text generation successful.");
+
+    // 2. Image Generation with Nano Banana 2, relaxed safety, and robust data extraction
+    let imageUrl = ''; 
     try {
-        analysis = JSON.parse(jsonText);
-    } catch(e: any) {
-        return createErrorResponse('Failed to parse JSON from text model', 500, { error: e.message, rawText, jsonText });
-    }
-    
-    // 2. Image Generation Attempt with Graceful Fallback
-    const imagePrompt = `A delicate botanical watercolor illustration of ${analysis.visual_description}. Organic, hand-drawn fine-line art in deep green #2D4628, soft transparent watercolor washes in low-saturation greens, warm cream background #F9F9F7, minimalist zen style.`;
-    
-    const imageResult = await model.generateContent(imagePrompt);
-    const imageResponse = await imageResult.response;
+        console.log("Attempting image generation with models/gemini-3.1-flash-image-preview...");
+        const imageModel = genAI.getGenerativeModel({ model: 'models/gemini-3.1-flash-image-preview' });
+        const imagePrompt = `A delicate botanical watercolor illustration of ${analysis.visual_description}. Organic, hand-drawn fine-line art in deep green #2D4628, soft transparent watercolor washes in low-saturation greens, warm cream background #F9F9F7, minimalist zen style.`;
+        
+        const safetySettings = [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        ];
 
-    let imageUrl = 'https://storage.googleapis.com/proudcity/mebanenc/uploads/2021/03/placeholder-image.png'; // Default placeholder
+        const imageResult = await imageModel.generateContent({ contents: [{ role: 'user', parts: [{ text: imagePrompt }] }], safetySettings });
 
-    const firstCandidate = imageResponse?.candidates?.[0];
-    if (firstCandidate?.finishReason === FinishReason.STOP && hasContent(firstCandidate) && firstCandidate.content.parts.length > 0) {
-        const firstPart = firstCandidate.content.parts[0];
-        if (isFileData(firstPart)) {
-            // Success! The model returned an actual image file.
-            imageUrl = firstPart.fileData.fileUri;
-        } else {
-            // The model returned text instead of an image. Log it and use the placeholder.
-            console.warn('Image generation model returned text instead of a file. Using placeholder. Text received:', (firstPart as any).text);
+        const candidates = imageResult.response.candidates;
+        if (candidates && candidates[0]?.content?.parts) {
+            const imagePart = candidates[0].content.parts.find(p => isInlineData(p));
+            if (imagePart && isInlineData(imagePart)) { // Type guard check
+                imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+                console.log('Generated image_url start:', imageUrl.substring(0, 40)); // Debug Log
+            }
         }
-    } else {
-      // The generation failed for other reasons. Log it and use the placeholder.
-      console.warn('Image generation failed or did not finish correctly. Using placeholder. Reason:', firstCandidate?.finishReason);
+    } catch (error: any) {
+        console.error("Image generation failed. This might be a 429 quota error or a content policy issue. Returning empty image_url.", error.message);
     }
-
+    
     // 3. Combine and Respond
     const finalResponse = {
         ...analysis,
-        image_url: imageUrl,
+        image_url: imageUrl
     };
 
     return new Response(JSON.stringify(finalResponse), { status: 200 });

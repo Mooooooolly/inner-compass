@@ -8,7 +8,6 @@ This file contains all user-facing text for the Inner Compass application.
 
 ### Editor View
 - **Page Title**: `整理思緒`
-- **Page Subtitle**: `在寧靜的空間裡，讓感受自然發芽。`
 - **Text Area Placeholder**: `寫下你的想法，讓內在智慧陪你慢慢灌溉...`
 - **Save Button (Default)**: `儲存`
 - **Save Button (Saving)**: `儲存中`
