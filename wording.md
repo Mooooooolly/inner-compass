@@ -1,6 +1,6 @@
 # Wording & Copy List
 
-This file contains all user-facing text for the Inner Compass application.
+This file contains all user-facing text for the Inner Garden application.
 
 ---
 
@@ -20,7 +20,7 @@ This file contains all user-facing text for the Inner Compass application.
 ### List View
 - **Page Title**: `紀錄軌跡`
 - **Empty State**: `這片土壤還很安靜。開始寫下你的第一篇日記吧...`
-- **Entry with no content**: `(尚無內容，等待你留下思緒...)`
+- **Entry with no content**: `(尚無內容，等待你留下思緒...)\`
 - **AI Interaction Tag**: `已對話`
 
 ### Collections View
@@ -40,7 +40,7 @@ This file contains all user-facing text for the Inner Compass application.
 - **General Cancel Button**: `取消`
 
 - **Privacy Notice Title**: `這裡是您的專屬避風港`
-- **Privacy Notice Body 1**: `Inner Compass 採用**「本地儲存」**。您的思緒與對話僅存放於此裝置的溫室中，外界無法窺探。`
+- **Privacy Notice Body 1**: `Inner Garden 採用**「本地儲存」**。您的思緒與對話僅存放於此裝置的溫室中，外界無法窺探。`
 - **Privacy Notice Body 2 (Warning)**: `⚠️ 若您使用公用電腦（如圖書館），請務必使用「無痕模式」，關閉視窗後資料才會自動清除，以免隱私外洩。`
 - **Privacy Notice Checkbox**: `我已了解，不再顯示此提示`
 - **Privacy Notice Confirm Button**: `開始使用`
@@ -57,27 +57,31 @@ This file contains all user-facing text for the Inner Compass application.
 
 ## 2. AI Coach Modal (`src/app/components/CoachModal.tsx`)
 
-- **Modal Title**: `內在智慧羅盤`
-- **Modal Subtitle**: `今日探索頻寬`
-- **Input Placeholder**: `在這裡，與內在的聲音共振...`
-- **Usage Limit Reached Message**: `今日的滋養已足夠。給思緒一點留白，讓覺察在土壤裡慢慢發酵。`
-- **System Error Prefix**: `(系統訊息)`
-- **Default Connection Error**: `抱歉，連線發生未知錯誤。`
-- **API Error Format**: `API 請求失敗 ({STATUS_CODE})`
+- **Modal Title**: `內在智慧`
+- **Initial Greeting (System Message)**: `(系統訊息) 我是你的內在智慧，準備好後，點擊下方按鈕，我會閱讀你的文字，並提出第一個問題。`
+- **Initial Greeting Button**: `準備好了，開始對話`
+- **Loading Message**: `正在分析你的想法...`
+- **Input Placeholder (Default)**: `輸入你的回應...`
+- **Input Placeholder (Limit Reached)**: `今天的對話額度已用完`
+- **Send Button (Tooltip)**: `送出`
+- **Bookmark Button (Tooltip)**: `收藏這個提問`
+- **Usage Counter Text**: `今日對話額度: {remaining}/{total}`
+- **Close Button (Tooltip)**: `結束對話`
+- **Limit Reached Title**: `今天的對話結束了`
+- **Limit Reached Body**: `我們今天已經聊了很多，讓這些想法沉澱一下吧。明天我們再繼續探索。`
+- **Limit Reached Confirm Button**: `好的，明天見`
 
 ---
 
-## 3. Main Layout (`src/app/components/Layout.tsx`)
+## 3. Weekly Report Card (`src/app/page.tsx`)
 
-- **Nav Item - Write**: `書寫`
-- **Nav Item - Journal**: `日記`
-- **Nav Item - Collections**: `收藏`
-- **Nav Item - Feedback**: `交流`
-- **Logo Vertical Text**: `INNER COMPASS`
+- **Card Title**: `內在溫室週報`
+- **Turning Point Sub-title**: `轉折點`
+- **Image Placeholder**: `植物正在發芽中...`
 
 ---
 
-## 4. In-App Browser Banner (`src/app/components/InAppBrowserBanner.tsx`)
+## 4. Metadata (`src/app/layout.tsx`)
 
-- **Banner Text**: `為了獲得完整的體驗，請點擊右上方「...」並選擇「在瀏覽器中開啟」`
-- **Close Banner Aria-Label**: `關閉橫幅`
+- **Site Title**: `Inner Garden - 你的內在花園`
+- **Site Description**: `一個讓你整理思緒、與內在智慧對話的數位花園。`

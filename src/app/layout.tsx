@@ -11,8 +11,8 @@ const notoSerifTC = Noto_Serif_TC({
 });
 
 export const metadata: Metadata = {
-  title: "Inner Compass - 你的內在羅盤",
-  description: "一個讓你整理思緒、與內在智慧對話的數位空間。",
+  title: "Inner Garden - 你的內在花園",
+  description: "一個讓你整理思緒、與內在智慧對話的數位花園。",
 };
 
 export default function RootLayout({

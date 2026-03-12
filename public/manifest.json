@@ -1,10 +1,7 @@
 {
-  "name": "Inner Compass",
-  "short_name": "Inner Compass",
-  "start_url": "/",
-  "theme_color": "#FFFFFF",
-  "background_color": "#FFFFFF",
-  "display": "standalone",
+  "name": "Inner Garden",
+  "short_name": "InnerGarden",
+  "description": "一個讓你整理思緒、與內在智慧對話的數位花園。",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -15,12 +12,10 @@
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
     }
-  ]
+  ],
+  "theme_color": "#fdfcf8",
+  "background_color": "#fdfcf8",
+  "display": "standalone",
+  "start_url": "/"
 }

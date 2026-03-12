@@ -108,7 +108,7 @@ const PrivacyNoticeModal = ({
 
   const handleConfirm = () => {
     if (dontShowAgain) {
-      localStorage.setItem('inner_compass_privacy_acknowledged', 'true');
+      localStorage.setItem('inner_garden_privacy_acknowledged', 'true');
     }
     onClose();
   };
@@ -125,7 +125,7 @@ const PrivacyNoticeModal = ({
           </h3>
           <div className="text-stone-500 font-serif-tc text-sm leading-relaxed mb-6 text-left bg-stone-50 p-4 rounded-lg border border-stone-100">
             <p className="mb-2">
-              Inner Compass 採用<strong>「本地儲存」</strong>。您的思緒與對話僅存放於此裝置的溫室中，外界無法窺探。
+              Inner Garden 採用<strong>「本地儲存」</strong>。您的思緒與對話僅存放於此裝置的溫室中，外界無法窺探。
             </p>
             <p className="text-red-500 font-medium text-xs">
               ⚠️ 若您使用公用電腦（如圖書館），請務必使用「無痕模式」，關閉視窗後資料才會自動清除，以免隱私外洩。
@@ -173,9 +173,9 @@ const FeedbackModal = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           access_key: process.env.NEXT_PUBLIC_WEB3FORMS_KEY, 
-          subject: 'Inner Compass 使用者回饋',
+          subject: 'Inner Garden 使用者回饋',
           message: message,
-          email: 'anonymous@inner-compass.app'
+          email: 'anonymous@inner-garden.app'
         }),
       });
 
@@ -345,7 +345,7 @@ export default function Home() {
 
         const updatedSummaries = [...currentSummaries, newSummary].filter(s => new Date(s.generated_at) > ninetyDaysAgo);
 
-        localStorage.setItem('inner_compass_summaries', JSON.stringify(updatedSummaries));
+        localStorage.setItem('inner_garden_summaries', JSON.stringify(updatedSummaries));
         setSummaries(updatedSummaries);
         console.log("💾 新的每日摘要已儲存，並清除了 90 天前的舊摘要。");
 
@@ -434,7 +434,7 @@ export default function Home() {
         ? [newReport, ...currentReports.filter(r => r.report_date !== mondayDateString)]
         : [...currentReports, newReport];
 
-      localStorage.setItem('inner_compass_weekly_reports', JSON.stringify(updatedReports));
+      localStorage.setItem('inner_garden_weekly_reports', JSON.stringify(updatedReports));
       setWeeklyReports(updatedReports);
       console.log("💾 新的週報已儲存。");
 
@@ -445,7 +445,7 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hasAcknowledged = localStorage.getItem('inner_compass_privacy_acknowledged');
+      const hasAcknowledged = localStorage.getItem('inner_garden_privacy_acknowledged');
       if (!hasAcknowledged) {
         setTimeout(() => setShowPrivacyNotice(true), 1000);
       }
@@ -454,9 +454,9 @@ export default function Home() {
       let initialSummaries: DailySummary[] = [];
       let initialWeeklyReports: WeeklyReport[] = [];
 
-      try { initialEntries = JSON.parse(localStorage.getItem('inner_compass_entries') || '[]'); } catch (e) { console.error("讀取日記失敗", e); }
-      try { initialSummaries = JSON.parse(localStorage.getItem('inner_compass_summaries') || '[]'); } catch (e) { console.error("讀取摘要失敗", e); }
-      try { initialWeeklyReports = JSON.parse(localStorage.getItem('inner_compass_weekly_reports') || '[]'); } catch (e) { console.error("讀取週報失敗", e); }
+      try { initialEntries = JSON.parse(localStorage.getItem('inner_garden_entries') || '[]'); } catch (e) { console.error("讀取日記失敗", e); }
+      try { initialSummaries = JSON.parse(localStorage.getItem('inner_garden_summaries') || '[]'); } catch (e) { console.error("讀取摘要失敗", e); }
+      try { initialWeeklyReports = JSON.parse(localStorage.getItem('inner_garden_weekly_reports') || '[]'); } catch (e) { console.error("讀取週報失敗", e); }
       
       setEntries(initialEntries);
       setSummaries(initialSummaries);
@@ -471,7 +471,7 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('inner_compass_entries', JSON.stringify(entries));
+      localStorage.setItem('inner_garden_entries', JSON.stringify(entries));
     }
   }, [entries]);
 
@@ -602,6 +602,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-stone-200 gap-4 mt-4 md:mt-0">
             <div className="space-y-2">
               <h1 className="text-4xl font-serif-tc font-bold text-stone-900 tracking-wider">整理思緒</h1>
+              <p className="text-stone-500 font-serif-tc italic text-sm">在寧靜的空間裡，讓感受自然發芽。</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
               <div className="flex items-center bg-white border border-stone-200 rounded-lg px-3 py-2 shadow-sm">
@@ -719,7 +720,7 @@ export default function Home() {
          <div className="max-w-3xl mx-auto animate-in fade-in">
             <h1 className="text-3xl font-serif-tc font-bold text-stone-900 mb-8 border-b border-stone-200 pb-4 mt-4 md:mt-0">收藏</h1>
             {allBookmarks.length === 0 ? (
-              <div className="text-center py-20">
+              <div className="text-center py_20">
                 <Bookmark className="w-12 h-12 text-stone-200 mx-auto mb-4" />
                 <p className="text-stone-400 font-serif-tc">尚無收藏。當你遇到觸動內心的提問時，點擊書籤將其收藏...</p>
               </div>
